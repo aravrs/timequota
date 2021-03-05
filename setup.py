@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="timequota",
-    version="0.0.0",
+    version="0.0.1",
     author="AravRS",
     description="Limit the time of your code",
     long_description=open("README.md").read() + "\n\n" + open("CHANGELOG.md").read(),
