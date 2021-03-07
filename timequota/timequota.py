@@ -3,7 +3,7 @@ import numpy as np
 
 
 class TimeQuota:
-    def __init__(self, quota):
+    def __init__(self, quota, name="tq", verbose=True):
         self.quota = quota
 
         self.time_elapsed = 0
@@ -14,6 +14,9 @@ class TimeQuota:
         self.time_steps = []
         self.time_per_step = 0
 
+        self.name = name
+        self.verbose = verbose
+
     def update(self, verbose=True):
 
         time_used = time.time() - self.time_since
@@ -22,9 +25,9 @@ class TimeQuota:
         self.time_remaining -= time_used
         self.time_since = time.time()
 
-        if verbose:
+        if self.verbose and verbose:
             print(
-                f"> time remaining: {self.time_remaining:.4f}",
+                f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
                 f"time elapsed: {self.time_elapsed:.4f}",
                 sep=" | ",
             )
@@ -40,9 +43,9 @@ class TimeQuota:
         self.time_remaining -= time_used
         self.time_since = time.time()
 
-        if verbose:
+        if self.verbose and verbose:
             print(
-                f"> time remaining: {self.time_remaining:.4f}",
+                f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
                 f"time elapsed: {self.time_elapsed:.4f}",
                 f"time this step: {time_used:.4f}",
                 f"time per step: {self.time_per_step:.4f}",
@@ -50,7 +53,9 @@ class TimeQuota:
             )
 
         if self.time_per_step > self.time_remaining:
-            print(f"\n> TIME EXCEEDED: {self.time_elapsed + self.time_per_step:.4f}")
+            print(
+                f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed + self.time_per_step:.4f}"
+            )
             return True
 
         return False
