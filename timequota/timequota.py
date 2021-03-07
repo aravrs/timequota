@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from prettytable import PrettyTable
 
 
 class TimeQuota:
@@ -60,3 +61,23 @@ class TimeQuota:
             self.time_exceeded = True
 
         return self.time_exceeded
+
+    def __str__(self):
+
+        pt = PrettyTable(border=True, header=True, padding_width=2)
+        pt.field_names = [self.name, f"Time (s)"]
+
+        pt.add_rows(
+            [
+                ["Time Quota", f"{self.quota:.4f}"],
+                ["Time Elapsed", f"{self.time_elapsed:.4f}"],
+                ["Time Remaining", f"{self.time_remaining:.4f}"],
+                ["Time Per Step", f"{self.time_per_step:.4f}"],
+                ["Time Exceeded", self.time_exceeded],
+            ]
+        )
+
+        pt.align[self.name] = "l"
+        pt.align[f"Time (s)"] = "r"
+
+        return pt.get_string()
