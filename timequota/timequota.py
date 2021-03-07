@@ -8,6 +8,7 @@ class TimeQuota:
 
         self.time_elapsed = 0
         self.time_remaining = self.quota
+        self.time_exceeded = False
 
         self.time_since = time.time()
 
@@ -56,6 +57,6 @@ class TimeQuota:
             print(
                 f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed + self.time_per_step:.4f}"
             )
-            return True
+            self.time_exceeded = True
 
-        return False
+        return self.time_exceeded
