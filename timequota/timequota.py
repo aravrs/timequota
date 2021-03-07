@@ -27,6 +27,12 @@ class TimeQuota:
         self.time_remaining -= time_used
         self.time_since = time.time()
 
+        if self.time_remaining < 0:
+            print(f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed:.4f}")
+            self.time_exceeded = True
+
+            return self.time_exceeded
+
         if self.verbose and verbose:
             print(
                 f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
@@ -34,7 +40,15 @@ class TimeQuota:
                 sep=" | ",
             )
 
+        return self.time_exceeded
+
     def track(self, verbose=True):
+
+        if self.time_remaining < 0:
+            print(f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed:.4f}")
+            self.time_exceeded = True
+
+            return self.time_exceeded
 
         time_used = time.time() - self.time_since
 
