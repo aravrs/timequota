@@ -81,3 +81,12 @@ class TimeQuota:
         pt.align[f"Time (s)"] = "r"
 
         return pt.get_string()
+
+    def __repr__(self):
+
+        return (
+            f"{self.__class__.__name__}"
+            + "("
+            + f"{self.quota!r}, {self.name!r}, {self.verbose!r}"
+            + ")"
+        )
