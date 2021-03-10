@@ -11,13 +11,13 @@ class TimeQuota:
         self.time_remaining = self.quota
         self.time_exceeded = False
 
-        self.time_since = time.time()
-
         self.time_steps = []
         self.time_per_step = 0
 
         self.name = name
         self.verbose = verbose
+
+        self.time_since = time.time()
 
     def update(self, verbose=True):
 
@@ -25,7 +25,6 @@ class TimeQuota:
 
         self.time_elapsed += time_used
         self.time_remaining -= time_used
-        self.time_since = time.time()
 
         self.time_exceeded = self.time_remaining < 0
 
@@ -40,6 +39,7 @@ class TimeQuota:
                 sep=" | ",
             )
 
+        self.time_since = time.time()
         return self.time_exceeded
 
     def track(self, verbose=True):
@@ -51,7 +51,6 @@ class TimeQuota:
 
         self.time_elapsed += time_used
         self.time_remaining -= time_used
-        self.time_since = time.time()
 
         self.time_exceeded = self.time_per_step > self.time_remaining
 
@@ -71,6 +70,7 @@ class TimeQuota:
                     f"Estimated: {self.time_elapsed + self.time_per_step:.4f}",
                 )
 
+        self.time_since = time.time()
         return self.time_exceeded
 
     def reset(self):
@@ -79,11 +79,10 @@ class TimeQuota:
         self.time_remaining = self.quota
         self.time_exceeded = False
 
-        self.time_since = time.time()
-
         self.time_steps = []
         self.time_per_step = 0
 
+        self.time_since = time.time()
         return self.time_exceeded
 
     def __str__(self):
