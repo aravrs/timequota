@@ -73,6 +73,19 @@ class TimeQuota:
 
         return self.time_exceeded
 
+    def reset(self):
+
+        self.time_elapsed = 0
+        self.time_remaining = self.quota
+        self.time_exceeded = False
+
+        self.time_since = time.time()
+
+        self.time_steps = []
+        self.time_per_step = 0
+
+        return self.time_exceeded
+
     def __str__(self):
 
         pt = PrettyTable(border=True, header=True, padding_width=2)
