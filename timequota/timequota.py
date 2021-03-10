@@ -27,11 +27,9 @@ class TimeQuota:
         self.time_remaining -= time_used
         self.time_since = time.time()
 
-        if self.time_remaining < 0:
-            print(f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed:.4f}")
+        if self.time_exceeded or self.time_remaining < 0:
+            print(f"\n{self.name} > TIME EXCEEDED!")
             self.time_exceeded = True
-
-            return self.time_exceeded
 
         if self.verbose and verbose:
             print(
@@ -44,33 +42,29 @@ class TimeQuota:
 
     def track(self, verbose=True):
 
-        if self.time_remaining < 0:
-            print(f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed:.4f}")
-            self.time_exceeded = True
+        if not (self.time_exceeded or self.time_remaining < 0):
+            time_used = time.time() - self.time_since
 
-            return self.time_exceeded
+            self.time_steps.append(time_used)
+            self.time_per_step = np.mean(self.time_steps)
 
-        time_used = time.time() - self.time_since
+            self.time_elapsed += time_used
+            self.time_remaining -= time_used
+            self.time_since = time.time()
 
-        self.time_steps.append(time_used)
-        self.time_per_step = np.mean(self.time_steps)
+            if self.verbose and verbose:
+                print(
+                    f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
+                    f"time elapsed: {self.time_elapsed:.4f}",
+                    f"time this step: {time_used:.4f}",
+                    f"time per step: {self.time_per_step:.4f}",
+                    sep=" | ",
+                )
 
-        self.time_elapsed += time_used
-        self.time_remaining -= time_used
-        self.time_since = time.time()
-
-        if self.verbose and verbose:
+        if self.time_exceeded or (self.time_per_step > self.time_remaining):
             print(
-                f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
-                f"time elapsed: {self.time_elapsed:.4f}",
-                f"time this step: {time_used:.4f}",
-                f"time per step: {self.time_per_step:.4f}",
-                sep=" | ",
-            )
-
-        if self.time_per_step > self.time_remaining:
-            print(
-                f"\n{self.name} > TIME EXCEEDED: {self.time_elapsed + self.time_per_step:.4f}"
+                f"\n{self.name} > TIME EXCEEDED!",
+                f"Estimated: {self.time_elapsed + self.time_per_step:.4f}",
             )
             self.time_exceeded = True
 
