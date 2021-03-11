@@ -6,5 +6,7 @@ sdist/
 *.egg-info/
 *.egg
 
-.vscode
 tests
+tests.ipynb
+
+.vscode
