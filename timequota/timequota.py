@@ -31,13 +31,16 @@ class TimeQuota:
         if self.verbose and verbose:
 
             if self.time_exceeded:
-                print(f"\n{self.name} > TIME EXCEEDED!")
-
-            print(
-                f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
-                f"time elapsed: {self.time_elapsed:.4f}",
-                sep=" | ",
-            )
+                print(
+                    f"\n{self.name} > TIME EXCEEDED!",
+                    f"Elapsed: {self.time_elapsed:.4f}, Overflow: {abs(self.time_remaining):.4f}",
+                )
+            else:
+                print(
+                    f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
+                    f"time elapsed: {self.time_elapsed:.4f}",
+                    sep=" | ",
+                )
 
         self.time_since = time.time()
         return self.time_exceeded
