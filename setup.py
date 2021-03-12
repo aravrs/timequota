@@ -2,9 +2,9 @@ import setuptools
 
 setuptools.setup(
     name="timequota",
-    version="0.0.1",
+    version="0.0.2",
     author="AravRS",
-    description="Limit the time of your code",
+    description="Limit the time of your script",
     long_description=open("README.md").read() + "\n\n" + open("CHANGELOG.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/AravRS/timequota",
