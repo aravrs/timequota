@@ -7,17 +7,18 @@ class TimeQuota:
     def __init__(self, quota, name="tq", verbose=True):
         self.quota = quota
 
-        self.time_elapsed = 0
-        self.time_remaining = self.quota
-        self.time_exceeded = False
+        # self.time_elapsed = 0
+        # self.time_remaining = self.quota
+        # self.time_exceeded = False
 
-        self.time_steps = []
-        self.time_per_step = 0
+        # self.time_steps = []
+        # self.time_per_step = 0
 
         self.name = name
         self.verbose = verbose
 
-        self.time_since = time.time()
+        # self.time_since = time.time()
+        self.reset()
 
     def update(self, verbose=True):
 
@@ -86,7 +87,6 @@ class TimeQuota:
         self.time_per_step = 0
 
         self.time_since = time.time()
-        return self.time_exceeded
 
     def __str__(self):
 
