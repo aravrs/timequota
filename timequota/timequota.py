@@ -7,27 +7,27 @@ class TimeQuota:
     def __init__(self, quota, name="tq", verbose=True):
         self.quota = quota
 
-        # self.time_elapsed = 0
-        # self.time_remaining = self.quota
-        # self.time_exceeded = False
-
-        # self.time_steps = []
-        # self.time_per_step = 0
-
         self.name = name
         self.verbose = verbose
 
-        # self.time_since = time.time()
         self.reset()
 
+    def _update_quota(self, track=False):
+        self.time_this_step = time.time() - self.time_since
+
+        self.time_elapsed += self.time_this_step
+        self.time_remaining -= self.time_this_step
+
+        if track:
+            self.time_steps.append(self.time_this_step)
+            self.time_per_step = np.mean(self.time_steps)
+
+        self.time_exceeded = (self.time_remaining < 0) or (
+            self.time_per_step > self.time_remaining
+        )
+
     def update(self, verbose=True):
-
-        time_used = time.time() - self.time_since
-
-        self.time_elapsed += time_used
-        self.time_remaining -= time_used
-
-        self.time_exceeded = self.time_remaining < 0
+        self._update_quota()
 
         if self.verbose and verbose:
 
@@ -47,23 +47,14 @@ class TimeQuota:
         return self.time_exceeded
 
     def track(self, verbose=True):
-
-        time_used = time.time() - self.time_since
-
-        self.time_steps.append(time_used)
-        self.time_per_step = np.mean(self.time_steps)
-
-        self.time_elapsed += time_used
-        self.time_remaining -= time_used
-
-        self.time_exceeded = self.time_per_step > self.time_remaining
+        self._update_quota(track=True)
 
         if self.verbose and verbose:
 
             print(
                 f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
                 f"time elapsed: {self.time_elapsed:.4f}",
-                f"time this step: {time_used:.4f}",
+                f"time this step: {self.time_this_step:.4f}",
                 f"time per step: {self.time_per_step:.4f}",
                 sep=" | ",
             )
@@ -85,6 +76,7 @@ class TimeQuota:
 
         self.time_steps = []
         self.time_per_step = 0
+        self.time_this_step = 0
 
         self.time_since = time.time()
 
