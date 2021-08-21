@@ -4,8 +4,17 @@ from prettytable import PrettyTable
 
 
 class TimeQuota:
-    def __init__(self, quota, name="tq", verbose=True):
-        self.quota = quota
+    def __init__(self, quota, mode="s", display_mode=None, name="tq", verbose=True):
+
+        self.mode = mode.lower()
+        self.display_mode = self.mode if display_mode is None else display_mode
+
+        if self.mode == "s":
+            self.quota = quota
+        elif self.mode == "m":
+            self.quota = quota * 60
+        elif self.mode == "h":
+            self.quota = quota * 3600
 
         self.name = name
         self.verbose = verbose
@@ -26,6 +35,35 @@ class TimeQuota:
             self.time_per_step > self.time_remaining
         )
 
+    def _get_display_string(self, input_time):
+        if self.display_mode == "s":
+            return f"{input_time:.4f}s"
+        elif self.display_mode == "m":
+            return f"{input_time/60:.4f}m"
+        elif self.display_mode == "h":
+            return f"{input_time/3600:.4f}h"
+        elif self.display_mode == "p":
+            return self._get_pretty_string(input_time)
+
+    def _get_pretty_string(self, seconds):
+        seconds = round(seconds)
+
+        d = seconds // (3600 * 24)
+        h = seconds // 3600 % 24
+        m = seconds % 3600 // 60
+        s = seconds % 3600 % 60
+
+        if d > 0:
+            return f"{d:02d}d {h:02d}h {m:02d}m {s:02d}s"
+        elif h > 0:
+            return f"{h:02d}h {m:02d}m {s:02d}s"
+        elif m > 0:
+            return f"{m:02d}m {s:02d}s"
+        elif s > 0:
+            return f"{s:02d}s"
+
+        return "-"
+
     def update(self, verbose=True):
         self._update_quota()
 
@@ -34,12 +72,13 @@ class TimeQuota:
             if self.time_exceeded:
                 print(
                     f"\n{self.name} > TIME EXCEEDED!",
-                    f"Elapsed: {self.time_elapsed:.4f}, Overflow: {abs(self.time_remaining):.4f}",
+                    f"Elapsed: {self._get_display_string(self.time_elapsed)}, Overflow: {self._get_display_string(abs(self.time_remaining))}",
                 )
             else:
                 print(
-                    f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
-                    f"time elapsed: {self.time_elapsed:.4f}",
+                    f"{self.name} > "
+                    + f"time remaining: {self._get_display_string(self.time_remaining)}",
+                    f"time elapsed: {self._get_display_string(self.time_elapsed)}",
                     sep=" | ",
                 )
 
@@ -52,24 +91,24 @@ class TimeQuota:
         if self.verbose and verbose:
 
             print(
-                f"{self.name} > " + f"time remaining: {self.time_remaining:.4f}",
-                f"time elapsed: {self.time_elapsed:.4f}",
-                f"time this step: {self.time_this_step:.4f}",
-                f"time per step: {self.time_per_step:.4f}",
+                f"{self.name} > "
+                + f"time remaining: {self._get_display_string(self.time_remaining)}",
+                f"time elapsed: {self._get_display_string(self.time_elapsed)}",
+                f"time this step: {self._get_display_string(self.time_this_step)}",
+                f"time per step: {self._get_display_string(self.time_per_step)}",
                 sep=" | ",
             )
 
             if self.time_exceeded:
                 print(
                     f"\n{self.name} > TIME EXCEEDED!",
-                    f"Estimated: {self.time_elapsed + self.time_per_step:.4f}",
+                    f"Estimated: {self._get_display_string(self.time_elapsed + self.time_per_step)}",
                 )
 
         self.time_since = time.time()
         return self.time_exceeded
 
     def reset(self):
-
         self.time_elapsed = 0
         self.time_remaining = self.quota
         self.time_exceeded = False
@@ -83,20 +122,41 @@ class TimeQuota:
     def __str__(self):
 
         pt = PrettyTable(border=True, header=True, padding_width=2)
-        pt.field_names = [self.name, f"Time (s)"]
+        pt.field_names = [self.name, f"Time ({self.display_mode})", "Time"]
 
         pt.add_rows(
             [
-                ["Time Quota", f"{self.quota:.4f}"],
-                ["Time Elapsed", f"{self.time_elapsed:.4f}"],
-                ["Time Remaining", f"{self.time_remaining:.4f}"],
-                ["Time Per Step", f"{self.time_per_step:.4f}"],
-                ["Time Exceeded", self.time_exceeded],
+                [
+                    "Time Quota",
+                    self._get_display_string(self.quota),
+                    self._get_pretty_string(self.quota),
+                ],
+                [
+                    "Time Elapsed",
+                    self._get_display_string(self.time_elapsed),
+                    self._get_pretty_string(self.time_elapsed),
+                ],
+                [
+                    "Time Remaining",
+                    self._get_display_string(self.time_remaining),
+                    self._get_pretty_string(self.time_remaining),
+                ],
+                [
+                    "Time Per Step",
+                    self._get_display_string(self.time_per_step),
+                    self._get_pretty_string(self.time_per_step),
+                ],
+                [
+                    "Time Exceeded",
+                    self.time_exceeded,
+                    self.time_exceeded,
+                ],
             ]
         )
 
         pt.align[self.name] = "l"
-        pt.align[f"Time (s)"] = "r"
+        pt.align[f"Time ({self.display_mode})"] = "r"
+        pt.align["Time"] = "r"
 
         return pt.get_string()
 
