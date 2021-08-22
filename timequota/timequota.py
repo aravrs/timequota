@@ -137,6 +137,26 @@ class TimeQuota:
         self.time_since = time.time()
         return self.time_exceeded
 
+    def range(
+        self,
+        *args,
+        verbose=True,
+        **kwargs,
+    ):
+        self.update(verbose=verbose)
+        print()
+
+        i = iter(range(*args, **kwargs))
+
+        while True:
+            try:
+                yield next(i)
+            except StopIteration:
+                break
+
+            if self.track(verbose=verbose):
+                break
+
     def reset(
         self,
     ):
