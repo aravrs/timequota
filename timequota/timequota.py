@@ -10,11 +10,12 @@ class TimeQuota:
         mode="s",
         display_mode=None,
         name="tq",
+        step_aggr_fn=None,
         verbose=True,
     ):
 
         self.mode = mode.lower()
-        self.display_mode = self.mode if display_mode is None else display_mode
+        self.display_mode = self.mode if display_mode is None else display_mode.lower()
 
         self.quota = 0
         if self.mode == "s":
@@ -25,6 +26,7 @@ class TimeQuota:
             self.quota = quota * 3600
 
         self.name = name
+        self.step_aggr_fn = mean if step_aggr_fn is None else step_aggr_fn
         self.verbose = verbose
 
         self.reset()
@@ -40,7 +42,7 @@ class TimeQuota:
 
         if track:
             self.time_steps.append(self.time_this_step)
-            self.time_per_step = mean(self.time_steps)
+            self.time_per_step = self.step_aggr_fn(self.time_steps)
 
         self.time_exceeded = (self.time_remaining < 0) or (
             self.time_per_step > self.time_remaining
@@ -50,18 +52,23 @@ class TimeQuota:
         self,
         seconds,
     ):
+
+        if self.display_mode == "p":
+            return self._get_pretty_string(seconds)
+
+        time_sign = "-" if seconds < 0 else ""
+        seconds = abs(seconds)
+
         s = seconds
         m = seconds / 60
         h = seconds / 3600
 
-        if self.display_mode == "p":
-            return self._get_pretty_string(seconds)
-        elif self.display_mode == "h" and h > 0:
-            return f"{h:.4f} hrs"
+        if self.display_mode == "h" and h > 0:
+            return f"{time_sign}{h:.4f} hrs"
         elif self.display_mode == "m" and m > 0:
-            return f"{m:.4f} mins"
+            return f"{time_sign}{m:.4f} mins"
         elif self.display_mode == "s" and s > 0:
-            return f"{s:.4f} secs"
+            return f"{time_sign}{s:.4f} secs"
 
         return "-"
 
@@ -69,7 +76,8 @@ class TimeQuota:
         self,
         seconds,
     ):
-        seconds = round(seconds)
+        time_sign = "-" if seconds < 0 else ""
+        seconds = abs(round(seconds))
 
         d = seconds // (3600 * 24)
         h = seconds // 3600 % 24
@@ -77,13 +85,13 @@ class TimeQuota:
         s = seconds % 3600 % 60
 
         if d > 0:
-            return f"{d:02d}d {h:02d}h {m:02d}m {s:02d}s"
+            return f"{time_sign}{d:02d}d {h:02d}h {m:02d}m {s:02d}s"
         elif h > 0:
-            return f"{h:02d}h {m:02d}m {s:02d}s"
+            return f"{time_sign}{h:02d}h {m:02d}m {s:02d}s"
         elif m > 0:
-            return f"{m:02d}m {s:02d}s"
+            return f"{time_sign}{m:02d}m {s:02d}s"
         elif s > 0:
-            return f"{s:02d}s"
+            return f"{time_sign}{s:02d}s"
 
         return "-"
 
@@ -140,6 +148,8 @@ class TimeQuota:
     def range(
         self,
         *args,
+        time_exceeded_fn=None,
+        time_exceeded_break=True,
         verbose=True,
         **kwargs,
     ):
@@ -155,7 +165,11 @@ class TimeQuota:
                 break
 
             if self.track(verbose=verbose):
-                break
+                if time_exceeded_fn is not None:
+                    time_exceeded_fn()
+
+                if time_exceeded_break:
+                    break
 
     def reset(
         self,
@@ -224,10 +238,15 @@ class TimeQuota:
     def __repr__(
         self,
     ):
+        _quota = self.quota
+        if self.mode == "m":
+            _quota /= 60
+        elif self.mode == "h":
+            _quota /= 3600
 
         return (
             f"{self.__class__.__name__}"
             + "("
-            + f"{self.quota!r}, {self.mode!r}, {self.display_mode!r}, {self.name!r}, {self.verbose!r}"
+            + f"{_quota!r}, {self.mode!r}, {self.display_mode!r}, {self.name!r}, {self.verbose!r}"
             + ")"
         )
