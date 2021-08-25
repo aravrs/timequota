@@ -1,5 +1,20 @@
 ## Changelog
 
+### 0.0.3
+
+💥 NEW:
+
+- added `range()`
+- added time modes and pretty time display
+
+✨ New Feature:
+
+- added `step_aggr_fn`, `mode` and `display_mode` options
+
+👌 Improve:
+
+- minor enhancements, refactor and fixes
+
 ### 0.0.2
 
 ✨ New Feature:
@@ -24,11 +39,11 @@
 
 ### 0.0.1
 
-💥 NEW
+💥 NEW:
 
 - added `update()` and `track()`
 
-📖 DOC
+📖 DOC:
 
 - added example demo nb
 

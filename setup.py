@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="timequota",
-    version="0.0.2",
+    version="0.0.3",
     author="AravRS",
     description="Manage the time of your script",
     long_description=open("PyPI.md").read(),
@@ -15,5 +15,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=["numpy", "prettytable"],
+    install_requires=["prettytable"],
 )
