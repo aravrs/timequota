@@ -1,6 +1,7 @@
 import time
 from statistics import mean
-from prettytable import PrettyTable
+from tabulate import tabulate
+from colorama import Fore, Style
 
 
 class TimeQuota:
@@ -11,6 +12,7 @@ class TimeQuota:
         display_mode=None,
         name="tq",
         step_aggr_fn=None,
+        precision=4,
         verbose=True,
     ):
 
@@ -27,6 +29,7 @@ class TimeQuota:
 
         self.name = name
         self.step_aggr_fn = mean if step_aggr_fn is None else step_aggr_fn
+        self.precision = precision
         self.verbose = verbose
 
         self.reset()
@@ -64,17 +67,18 @@ class TimeQuota:
         h = seconds / 3600
 
         if self.display_mode == "h" and h > 0:
-            return f"{time_sign}{h:.4f} hrs"
+            return f"{Fore.CYAN}{time_sign}{h:.{self.precision}f}h{Style.RESET_ALL}"
         elif self.display_mode == "m" and m > 0:
-            return f"{time_sign}{m:.4f} mins"
+            return f"{Fore.CYAN}{time_sign}{m:.{self.precision}f}m{Style.RESET_ALL}"
         elif self.display_mode == "s" and s > 0:
-            return f"{time_sign}{s:.4f} secs"
+            return f"{Fore.CYAN}{time_sign}{s:.{self.precision}f}s{Style.RESET_ALL}"
 
         return "-"
 
     def _get_pretty_string(
         self,
         seconds,
+        display=False,
     ):
         time_sign = "-" if seconds < 0 else ""
         seconds = abs(round(seconds))
@@ -84,14 +88,14 @@ class TimeQuota:
         m = seconds % 3600 // 60
         s = seconds % 3600 % 60
 
-        if d > 0:
-            return f"{time_sign}{d:02d}d {h:02d}h {m:02d}m {s:02d}s"
+        if display or d > 0:
+            return f"{Fore.CYAN}{time_sign}{d:02d}d {h:02d}h {m:02d}m {s:02d}s{Style.RESET_ALL}"
         elif h > 0:
-            return f"{time_sign}{h:02d}h {m:02d}m {s:02d}s"
+            return f"{Fore.CYAN}{time_sign}{h:02d}h {m:02d}m {s:02d}s{Style.RESET_ALL}"
         elif m > 0:
-            return f"{time_sign}{m:02d}m {s:02d}s"
+            return f"{Fore.CYAN}{time_sign}{m:02d}m {s:02d}s{Style.RESET_ALL}"
         elif s > 0:
-            return f"{time_sign}{s:02d}s"
+            return f"{Fore.CYAN}{time_sign}{s:02d}s{Style.RESET_ALL}"
 
         return "-"
 
@@ -105,15 +109,15 @@ class TimeQuota:
 
             if self.time_exceeded:
                 print(
-                    f"\n{self.name} > TIME EXCEEDED!",
+                    f"\n{Fore.GREEN}{self.name}{Style.RESET_ALL} {Fore.RED}⚠ TIME EXCEEDED!{Style.RESET_ALL}",
                     f"Elapsed: {self._get_display_string(self.time_elapsed)}, Overflow: {self._get_display_string(abs(self.time_remaining))}",
                 )
             else:
                 print(
-                    f"{self.name} > "
-                    + f"time remaining: {self._get_display_string(self.time_remaining)}",
-                    f"time elapsed: {self._get_display_string(self.time_elapsed)}",
-                    sep=" | ",
+                    f"{Fore.GREEN}{self.name} » {Style.RESET_ALL}"
+                    + f"remaining: {self._get_display_string(self.time_remaining)}",
+                    f"elapsed: {self._get_display_string(self.time_elapsed)}",
+                    sep=", ",
                 )
 
         self.time_since = time.time()
@@ -128,17 +132,17 @@ class TimeQuota:
         if self.verbose and verbose:
 
             print(
-                f"{self.name} > "
-                + f"time remaining: {self._get_display_string(self.time_remaining)}",
-                f"time elapsed: {self._get_display_string(self.time_elapsed)}",
-                f"time this step: {self._get_display_string(self.time_this_step)}",
-                f"time per step: {self._get_display_string(self.time_per_step)}",
-                sep=" | ",
+                f"{Fore.GREEN}{self.name} » {Style.RESET_ALL}"
+                + f"remaining: {self._get_display_string(self.time_remaining)}",
+                f"elapsed: {self._get_display_string(self.time_elapsed)}",
+                f"this step: {self._get_display_string(self.time_this_step)}",
+                f"per step: {self._get_display_string(self.time_per_step)}",
+                sep=", ",
             )
 
             if self.time_exceeded:
                 print(
-                    f"\n{self.name} > TIME EXCEEDED!",
+                    f"\n{Fore.GREEN}{self.name}{Style.RESET_ALL} {Fore.RED}⚠ TIME EXCEEDED!{Style.RESET_ALL}",
                     f"Estimated: {self._get_display_string(self.time_elapsed + self.time_per_step)}",
                 )
 
@@ -188,52 +192,50 @@ class TimeQuota:
         self,
     ):
 
-        pt = PrettyTable(
-            border=True,
-            header=True,
-            padding_width=2,
-        )
-        pt.field_names = [
-            self.name,
-            "Time",
-            f"Time ({self.display_mode})",
+        headers = [
+            f"{Fore.GREEN}{self.name}{Style.RESET_ALL}",
+            f"{Fore.YELLOW}Time{Style.RESET_ALL}",
+            f"{Fore.YELLOW}Time ({self.display_mode}){Style.RESET_ALL}",
         ]
 
-        pt.add_rows(
+        table = [
             [
-                [
-                    "Time Quota",
-                    self._get_pretty_string(self.quota),
-                    self._get_display_string(self.quota),
-                ],
-                [
-                    "Time Elapsed",
-                    self._get_pretty_string(self.time_elapsed),
-                    self._get_display_string(self.time_elapsed),
-                ],
-                [
-                    "Time Remaining",
-                    self._get_pretty_string(self.time_remaining),
-                    self._get_display_string(self.time_remaining),
-                ],
-                [
-                    "Time Per Step",
-                    self._get_pretty_string(self.time_per_step),
-                    self._get_display_string(self.time_per_step),
-                ],
-                [
-                    "Time Exceeded",
-                    self.time_exceeded,
-                    self.time_exceeded,
-                ],
-            ]
+                "Time Quota",
+                self._get_pretty_string(self.quota, display=True),
+                self._get_display_string(self.quota),
+            ],
+            [
+                "Time Elapsed",
+                self._get_pretty_string(self.time_elapsed, display=True),
+                self._get_display_string(self.time_elapsed),
+            ],
+            [
+                "Time Remaining",
+                self._get_pretty_string(self.time_remaining, display=True),
+                self._get_display_string(self.time_remaining),
+            ],
+            [
+                "Time Per Step",
+                self._get_pretty_string(self.time_per_step, display=True),
+                self._get_display_string(self.time_per_step),
+            ],
+            [
+                "Time Exceeded",
+                f"{Fore.RED}True{Style.RESET_ALL}"
+                if self.time_exceeded
+                else f"{Fore.CYAN}False{Style.RESET_ALL}",
+                f"{Fore.RED}True{Style.RESET_ALL}"
+                if self.time_exceeded
+                else f"{Fore.CYAN}False{Style.RESET_ALL}",
+            ],
+        ]
+
+        return tabulate(
+            table,
+            headers,
+            colalign=("left", "right", "right"),
+            tablefmt="simple",
         )
-
-        pt.align[self.name] = "l"
-        pt.align[f"Time ({self.display_mode})"] = "r"
-        pt.align["Time"] = "r"
-
-        return pt.get_string()
 
     def __repr__(
         self,
