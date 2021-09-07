@@ -175,6 +175,31 @@ class TimeQuota:
                 if time_exceeded_break:
                     break
 
+    def iter(
+        self,
+        iterable,
+        time_exceeded_fn=None,
+        time_exceeded_break=True,
+        verbose=True,
+    ):
+        self.update(verbose=verbose)
+        print()
+
+        i = iter(iterable)
+
+        while True:
+            try:
+                yield next(i)
+            except StopIteration:
+                break
+
+            if self.track(verbose=verbose):
+                if time_exceeded_fn is not None:
+                    time_exceeded_fn()
+
+                if time_exceeded_break:
+                    break
+
     def reset(
         self,
     ):
