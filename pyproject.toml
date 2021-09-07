@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "timequota"
+version = "0.0.3"
+description = "Manage the time of your script"
+authors = []
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+colorama = "^0.4.4"
+tabulate = "^0.8.9"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.9.2"
+black = "^21.8b0"
+ipykernel = "^6.3.1"
+numpy = "^1.21.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

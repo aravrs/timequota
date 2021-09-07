@@ -10,3 +10,4 @@ tests
 tests.ipynb
 
 .vscode
+poetry.lock
