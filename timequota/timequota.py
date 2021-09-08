@@ -57,7 +57,6 @@ class TimeQuota:
         self,
         seconds: Union[int, float],
     ) -> str:
-
         if self.display_mode == "p":
             return self._get_pretty_string(seconds)
 
@@ -161,14 +160,9 @@ class TimeQuota:
         verbose: Optional[bool] = True,
         **kwargs: Any,
     ) -> Iterable[int]:
-        i = iter(range(*args, **kwargs))
-
         if not self.update(verbose=verbose):
-            while True:
-                try:
-                    yield next(i)
-                except StopIteration:
-                    break
+            for i in range(*args, **kwargs):
+                yield i
 
                 if self.track(verbose=verbose):
                     if time_exceeded_fn is not None:
@@ -185,14 +179,9 @@ class TimeQuota:
         time_exceeded_break: Optional[bool] = True,
         verbose: Optional[bool] = True,
     ) -> Iterable[Any]:
-        i = iter(iterable)
-
         if not self.update(verbose=verbose):
-            while True:
-                try:
-                    yield next(i)
-                except StopIteration:
-                    break
+            for i in iterable:
+                yield i
 
                 if self.track(verbose=verbose):
                     if time_exceeded_fn is not None:
@@ -217,7 +206,6 @@ class TimeQuota:
     def __str__(
         self,
     ) -> str:
-
         headers = [
             f"{Fore.GREEN}{self.name}{Style.RESET_ALL}",
             f"{Fore.YELLOW}Time{Style.RESET_ALL}",
