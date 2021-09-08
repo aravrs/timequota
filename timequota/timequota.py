@@ -3,7 +3,18 @@ from statistics import mean
 
 from tabulate import tabulate
 from colorama import Fore, Style
+
+from collections import defaultdict
 from typing import Any, Optional, Iterable, Callable, Union
+
+
+_color_dict = {
+    "g": Fore.GREEN,
+    "c": Fore.CYAN,
+    "y": Fore.YELLOW,
+    "r": Fore.RED,
+    "R": Style.RESET_ALL,
+}
 
 
 class TimeQuota:
@@ -15,7 +26,10 @@ class TimeQuota:
         *,
         name: Optional[str] = "tq",
         step_aggr_fn: Optional[Callable] = mean,
+        timer_fn: Optional[str] = "perf_counter",
+        logger_fn: Optional[Callable] = print,
         precision: Optional[int] = 4,
+        color: Optional[bool] = True,
         verbose: Optional[bool] = True,
     ) -> None:
         self.mode = mode.lower()
@@ -31,7 +45,10 @@ class TimeQuota:
 
         self.name = name
         self.step_aggr_fn = step_aggr_fn
+        self.timer_fn = getattr(time, timer_fn)
+        self.logger_fn = logger_fn
         self.precision = precision
+        self.color = _color_dict if color else defaultdict(str)
         self.verbose = verbose
 
         self.reset()
@@ -40,7 +57,7 @@ class TimeQuota:
         self,
         track: Optional[bool] = False,
     ) -> None:
-        self.time_this_step = time.time() - self.time_since
+        self.time_this_step = self.timer_fn() - self.time_since
 
         self.time_elapsed += self.time_this_step
         self.time_remaining -= self.time_this_step
@@ -68,13 +85,19 @@ class TimeQuota:
         h = seconds / 3600
 
         if self.display_mode == "h" and h > 0:
-            return f"{Fore.CYAN}{time_sign}{h:.{self.precision}f}h{Style.RESET_ALL}"
+            return (
+                f"{self.color['c']}{time_sign}{h:.{self.precision}f}h{self.color['R']}"
+            )
         elif self.display_mode == "m" and m > 0:
-            return f"{Fore.CYAN}{time_sign}{m:.{self.precision}f}m{Style.RESET_ALL}"
+            return (
+                f"{self.color['c']}{time_sign}{m:.{self.precision}f}m{self.color['R']}"
+            )
         elif self.display_mode == "s" and s > 0:
-            return f"{Fore.CYAN}{time_sign}{s:.{self.precision}f}s{Style.RESET_ALL}"
+            return (
+                f"{self.color['c']}{time_sign}{s:.{self.precision}f}s{self.color['R']}"
+            )
 
-        return "-"
+        return f"{self.color['c']}―{self.color['R']}"
 
     def _get_pretty_string(
         self,
@@ -90,15 +113,15 @@ class TimeQuota:
         s = seconds % 3600 % 60
 
         if display or d > 0:
-            return f"{Fore.CYAN}{time_sign}{d:02d}d {h:02d}h {m:02d}m {s:02d}s{Style.RESET_ALL}"
+            return f"{self.color['c']}{time_sign}{d:02d}d {h:02d}h {m:02d}m {s:02d}s{self.color['R']}"
         elif h > 0:
-            return f"{Fore.CYAN}{time_sign}{h:02d}h {m:02d}m {s:02d}s{Style.RESET_ALL}"
+            return f"{self.color['c']}{time_sign}{h:02d}h {m:02d}m {s:02d}s{self.color['R']}"
         elif m > 0:
-            return f"{Fore.CYAN}{time_sign}{m:02d}m {s:02d}s{Style.RESET_ALL}"
+            return f"{self.color['c']}{time_sign}{m:02d}m {s:02d}s{self.color['R']}"
         elif s > 0:
-            return f"{Fore.CYAN}{time_sign}{s:02d}s{Style.RESET_ALL}"
+            return f"{self.color['c']}{time_sign}{s:02d}s{self.color['R']}"
 
-        return "-"
+        return f"{self.color['c']}―{self.color['R']}"
 
     def update(
         self,
@@ -111,18 +134,18 @@ class TimeQuota:
 
             if self.time_exceeded:
                 print(
-                    f"\n{Fore.GREEN}{self.name}{Style.RESET_ALL} {Fore.RED}⚠ TIME EXCEEDED!{Style.RESET_ALL}",
+                    f"\n{self.color['g']}{self.name}{self.color['R']} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']}",
                     f"Elapsed: {self._get_display_string(self.time_elapsed)}, Overflow: {self._get_display_string(abs(self.time_remaining))}",
                 )
             else:
                 print(
-                    f"{Fore.GREEN}{self.name} » {Style.RESET_ALL}"
+                    f"{self.color['g']}{self.name} » {self.color['R']}"
                     + f"remaining: {self._get_display_string(self.time_remaining)}",
                     f"elapsed: {self._get_display_string(self.time_elapsed)}",
                     sep=", ",
                 )
 
-        self.time_since = time.time()
+        self.time_since = self.timer_fn()
         return self.time_exceeded
 
     def track(
@@ -135,7 +158,7 @@ class TimeQuota:
         if self.verbose and verbose:
 
             print(
-                f"{Fore.GREEN}{self.name} » {Style.RESET_ALL}"
+                f"{self.color['g']}{self.name} » {self.color['R']}"
                 + f"remaining: {self._get_display_string(self.time_remaining)}",
                 f"elapsed: {self._get_display_string(self.time_elapsed)}",
                 f"this step: {self._get_display_string(self.time_this_step)}",
@@ -145,11 +168,11 @@ class TimeQuota:
 
             if self.time_exceeded:
                 print(
-                    f"\n{Fore.GREEN}{self.name}{Style.RESET_ALL} {Fore.RED}⚠ TIME EXCEEDED!{Style.RESET_ALL}",
+                    f"\n{self.color['g']}{self.name}{self.color['R']} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']}",
                     f"Estimated: {self._get_display_string(self.time_elapsed + self.time_per_step)}",
                 )
 
-        self.time_since = time.time()
+        self.time_since = self.timer_fn()
         return self.time_exceeded
 
     def range(
@@ -201,15 +224,15 @@ class TimeQuota:
         self.time_per_step = 0
         self.time_this_step = 0
 
-        self.time_since = time.time()
+        self.time_since = self.timer_fn()
 
     def __str__(
         self,
     ) -> str:
         headers = [
-            f"{Fore.GREEN}{self.name}{Style.RESET_ALL}",
-            f"{Fore.YELLOW}Time{Style.RESET_ALL}",
-            f"{Fore.YELLOW}Time ({self.display_mode}){Style.RESET_ALL}",
+            f"{self.color['g']}{self.name}{self.color['R']}",
+            f"{self.color['y']}Time{self.color['R']}",
+            f"{self.color['y']}Time ({self.display_mode}){self.color['R']}",
         ]
 
         table = [
@@ -235,12 +258,12 @@ class TimeQuota:
             ],
             [
                 "Time Exceeded",
-                f"{Fore.RED}True{Style.RESET_ALL}"
+                f"{self.color['r']}True{self.color['R']}"
                 if self.time_exceeded
-                else f"{Fore.CYAN}False{Style.RESET_ALL}",
-                f"{Fore.RED}True{Style.RESET_ALL}"
+                else f"{self.color['c']}False{self.color['R']}",
+                f"{self.color['r']}True{self.color['R']}"
                 if self.time_exceeded
-                else f"{Fore.CYAN}False{Style.RESET_ALL}",
+                else f"{self.color['c']}False{self.color['R']}",
             ],
         ]
 
