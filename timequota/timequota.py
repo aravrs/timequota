@@ -1,21 +1,23 @@
 import time
 from statistics import mean
+
 from tabulate import tabulate
 from colorama import Fore, Style
+from typing import Any, Optional, Iterable, Callable, Union
 
 
 class TimeQuota:
     def __init__(
         self,
-        quota,
-        mode="s",
-        display_mode=None,
-        name="tq",
-        step_aggr_fn=None,
-        precision=4,
-        verbose=True,
-    ):
-
+        quota: Union[int, float],
+        mode: Optional[str] = "s",
+        display_mode: Optional[str] = None,
+        *,
+        name: Optional[str] = "tq",
+        step_aggr_fn: Optional[Callable] = mean,
+        precision: Optional[int] = 4,
+        verbose: Optional[bool] = True,
+    ) -> None:
         self.mode = mode.lower()
         self.display_mode = self.mode if display_mode is None else display_mode.lower()
 
@@ -28,7 +30,7 @@ class TimeQuota:
             self.quota = quota * 3600
 
         self.name = name
-        self.step_aggr_fn = mean if step_aggr_fn is None else step_aggr_fn
+        self.step_aggr_fn = step_aggr_fn
         self.precision = precision
         self.verbose = verbose
 
@@ -36,8 +38,8 @@ class TimeQuota:
 
     def _update_quota(
         self,
-        track=False,
-    ):
+        track: Optional[bool] = False,
+    ) -> None:
         self.time_this_step = time.time() - self.time_since
 
         self.time_elapsed += self.time_this_step
@@ -53,8 +55,8 @@ class TimeQuota:
 
     def _get_display_string(
         self,
-        seconds,
-    ):
+        seconds: Union[int, float],
+    ) -> str:
 
         if self.display_mode == "p":
             return self._get_pretty_string(seconds)
@@ -77,9 +79,9 @@ class TimeQuota:
 
     def _get_pretty_string(
         self,
-        seconds,
-        display=False,
-    ):
+        seconds: Union[int, float],
+        display: Optional[bool] = False,
+    ) -> str:
         time_sign = "-" if seconds < 0 else ""
         seconds = abs(round(seconds))
 
@@ -101,8 +103,9 @@ class TimeQuota:
 
     def update(
         self,
-        verbose=True,
-    ):
+        *,
+        verbose: Optional[bool] = True,
+    ) -> bool:
         self._update_quota()
 
         if self.verbose and verbose:
@@ -125,8 +128,9 @@ class TimeQuota:
 
     def track(
         self,
-        verbose=True,
-    ):
+        *,
+        verbose: Optional[bool] = True,
+    ) -> bool:
         self._update_quota(track=True)
 
         if self.verbose and verbose:
@@ -151,12 +155,12 @@ class TimeQuota:
 
     def range(
         self,
-        *args,
-        time_exceeded_fn=None,
-        time_exceeded_break=True,
-        verbose=True,
-        **kwargs,
-    ):
+        *args: Any,
+        time_exceeded_fn: Optional[Callable] = None,
+        time_exceeded_break: Optional[bool] = True,
+        verbose: Optional[bool] = True,
+        **kwargs: Any,
+    ) -> Iterable[int]:
         i = iter(range(*args, **kwargs))
 
         if not self.update(verbose=verbose):
@@ -175,11 +179,12 @@ class TimeQuota:
 
     def iter(
         self,
-        iterable,
-        time_exceeded_fn=None,
-        time_exceeded_break=True,
-        verbose=True,
-    ):
+        iterable: Iterable[Any],
+        *,
+        time_exceeded_fn: Optional[Callable] = None,
+        time_exceeded_break: Optional[bool] = True,
+        verbose: Optional[bool] = True,
+    ) -> Iterable[Any]:
         i = iter(iterable)
 
         if not self.update(verbose=verbose):
@@ -198,7 +203,7 @@ class TimeQuota:
 
     def reset(
         self,
-    ):
+    ) -> None:
         self.time_elapsed = 0
         self.time_remaining = self.quota
         self.time_exceeded = False
@@ -211,7 +216,7 @@ class TimeQuota:
 
     def __str__(
         self,
-    ):
+    ) -> str:
 
         headers = [
             f"{Fore.GREEN}{self.name}{Style.RESET_ALL}",
@@ -260,7 +265,7 @@ class TimeQuota:
 
     def __repr__(
         self,
-    ):
+    ) -> str:
         _quota = self.quota
         if self.mode == "m":
             _quota /= 60
@@ -270,6 +275,6 @@ class TimeQuota:
         return (
             f"{self.__class__.__name__}"
             + "("
-            + f"{_quota!r}, {self.mode!r}, {self.display_mode!r}, {self.name!r}, {self.verbose!r}"
+            + f"{_quota!r}, {self.mode!r}, {self.display_mode!r}, {self.name!r}"
             + ")"
         )
