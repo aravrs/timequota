@@ -129,6 +129,34 @@ class TimeQuota:
 
         return self.color["c"] + pretty_string + self.color["R"]
 
+    def _get_time_exceeded_string(self):
+        if self.overflow:
+            return (
+                f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']}",
+                f"Elapsed: {self._get_display_string(self.time_elapsed)}, Overflowed: {self._get_display_string(abs(self.time_remaining))}",
+            )
+        elif self.predicted_overflow:
+            predicted_overflow_time = self.time_elapsed + self.time_per_step
+            return (
+                f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED! [Predicted]{self.color['R']}",
+                f"Estimated: {self._get_display_string(predicted_overflow_time)}, Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}",
+            )
+
+    def _get_info_string(self, track=False):
+        info_string = (
+            f"{self.color['g']}{self.name} » {self.color['R']}"
+            + f"remaining: {self._get_display_string(self.time_remaining)}",
+            f"elapsed: {self._get_display_string(self.time_elapsed)}",
+        )
+
+        if track:
+            info_string += (
+                f"this step: {self._get_display_string(self.time_this_step)}",
+                f"per step: {self._get_display_string(self.time_per_step)}",
+            )
+
+        return info_string
+
     def update(
         self,
         *,
@@ -137,19 +165,10 @@ class TimeQuota:
         self._update_quota()
 
         if self.verbose and verbose:
-
             if self.time_exceeded:
-                print(
-                    f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']}",
-                    f"Elapsed: {self._get_display_string(self.time_elapsed)}, Overflow: {self._get_display_string(abs(self.time_remaining))}",
-                )
+                self.logger_fn(*self._get_time_exceeded_string())
             else:
-                print(
-                    f"{self.color['g']}{self.name} » {self.color['R']}"
-                    + f"remaining: {self._get_display_string(self.time_remaining)}",
-                    f"elapsed: {self._get_display_string(self.time_elapsed)}",
-                    sep=", ",
-                )
+                self.logger_fn(*self._get_info_string(), sep=", ")
 
         self.time_since = self.timer_fn()
         return self.time_exceeded
@@ -162,21 +181,9 @@ class TimeQuota:
         self._update_quota(track=True)
 
         if self.verbose and verbose:
-
-            print(
-                f"{self.color['g']}{self.name} » {self.color['R']}"
-                + f"remaining: {self._get_display_string(self.time_remaining)}",
-                f"elapsed: {self._get_display_string(self.time_elapsed)}",
-                f"this step: {self._get_display_string(self.time_this_step)}",
-                f"per step: {self._get_display_string(self.time_per_step)}",
-                sep=", ",
-            )
-
+            self.logger_fn(*self._get_info_string(track=True), sep=", ")
             if self.time_exceeded:
-                print(
-                    f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']}",
-                    f"Estimated: {self._get_display_string(self.time_elapsed + self.time_per_step)}",
-                )
+                self.logger_fn(*self._get_time_exceeded_string())
 
         self.time_since = self.timer_fn()
         return self.time_exceeded
@@ -240,6 +247,13 @@ class TimeQuota:
             f"{self.color['y']}Time ({self.display_mode}){self.color['R']}",
         ]
 
+        if self.overflow:
+            time_exceeded_string = self.color["r"] + "True" + self.color["R"]
+        elif self.predicted_overflow:
+            time_exceeded_string = self.color["r"] + "Predicted" + self.color["R"]
+        else:
+            time_exceeded_string = self.color["c"] + "False" + self.color["R"]
+
         table = [
             [
                 "Time Quota",
@@ -263,12 +277,8 @@ class TimeQuota:
             ],
             [
                 "Time Exceeded",
-                self.color["r" if self.time_exceeded else "c"]
-                + str(self.time_exceeded)
-                + self.color["R"],
-                self.color["r" if self.time_exceeded else "c"]
-                + str(self.time_exceeded)
-                + self.color["R"],
+                time_exceeded_string,
+                time_exceeded_string,
             ],
         ]
 
