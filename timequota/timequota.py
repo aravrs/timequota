@@ -31,7 +31,7 @@ class TimeQuota:
         *,
         name: Optional[str] = "tq",
         step_aggr_fn: Optional[Callable[[list[float]], float]] = mean,
-        timer_fn: Optional[str] = "perf_counter",
+        timer_fn: Optional[Callable[[], float]] = time.perf_counter,
         logger_fn: Optional[Callable[[str], None]] = print,
         precision: Optional[int] = 4,
         color: Optional[bool] = True,
@@ -43,7 +43,7 @@ class TimeQuota:
 
         self.name = name
         self.step_aggr_fn = step_aggr_fn
-        self.timer_fn = getattr(time, timer_fn)
+        self.timer_fn = timer_fn
         self.logger_fn = logger_fn
 
         self.precision = precision
@@ -61,12 +61,12 @@ class TimeQuota:
         self.time_elapsed += self.time_this_step
         self.time_remaining -= self.time_this_step
 
+        self.overflow = self.time_remaining < 0
+
         if track:
             self.time_steps.append(self.time_this_step)
             self.time_per_step = self.step_aggr_fn(self.time_steps)
-
-        self.overflow = self.time_remaining < 0
-        self.predicted_overflow = self.time_per_step > self.time_remaining
+            self.predicted_overflow = self.time_per_step > self.time_remaining
 
         self.time_exceeded = self.overflow or self.predicted_overflow
 
