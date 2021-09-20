@@ -6,8 +6,8 @@ sdist/
 *.egg-info/
 *.egg
 
-tests
-tests.ipynb
+playground.ipynb
+.coverage
 
 .vscode
 poetry.lock
