@@ -5,7 +5,7 @@ from tabulate import tabulate
 from colorama import Fore, Style
 
 from collections import defaultdict
-from typing import Any, Optional, Iterable, Callable, Union
+from typing import Any, Iterable, Callable, Union
 
 _time_dict = {
     "s": 1,
@@ -26,20 +26,21 @@ class TimeQuota:
     def __init__(
         self,
         quota: Union[int, float],
-        mode: Optional[str] = "s",
-        display_mode: Optional[str] = None,
+        mode: str = "s",
+        display_mode: str = None,
         *,
-        name: Optional[str] = "tq",
-        step_aggr_fn: Optional[Callable[[list[float]], float]] = mean,
-        timer_fn: Optional[Callable[[], float]] = time.perf_counter,
-        logger_fn: Optional[Callable[[str], None]] = print,
-        precision: Optional[int] = 4,
-        color: Optional[bool] = True,
-        verbose: Optional[bool] = True,
+        name: str = "tq",
+        step_aggr_fn: Callable[[list[float]], float] = mean,
+        timer_fn: Callable[[], float] = time.perf_counter,
+        logger_fn: Callable[[str], None] = print,
+        precision: int = 4,
+        color: bool = True,
+        verbose: bool = True,
     ) -> None:
+
         self.mode = mode.lower()
         self.display_mode = self.mode if display_mode is None else display_mode.lower()
-        self.quota = float(quota) * _time_dict.get(self.mode)
+        self.quota = float(quota) * _time_dict[self.mode]
 
         self.name = name
         self.step_aggr_fn = step_aggr_fn
@@ -52,9 +53,25 @@ class TimeQuota:
 
         self.reset()
 
+    def reset(
+        self,
+    ) -> None:
+        self.time_elapsed: float = 0
+        self.time_remaining: float = self.quota
+
+        self.overflow: bool = False
+        self.predicted_overflow: bool = False
+        self.time_exceeded: bool = False
+
+        self.time_steps: list[float] = []
+        self.time_per_step: float = 0
+        self.time_this_step: float = 0
+
+        self.time_since: Union[int, float] = self.timer_fn()
+
     def _update_quota(
         self,
-        track: Optional[bool] = False,
+        track: bool = False,
     ) -> None:
         self.time_this_step = self.timer_fn() - self.time_since
 
@@ -84,9 +101,9 @@ class TimeQuota:
             time_sign = "-" if seconds < 0 else ""
             seconds = abs(seconds)
 
-            s = seconds / _time_dict.get("s")
-            m = seconds / _time_dict.get("m")
-            h = seconds / _time_dict.get("h")
+            s = seconds / _time_dict["s"]
+            m = seconds / _time_dict["m"]
+            h = seconds / _time_dict["h"]
 
             if self.display_mode == "h" and h > 0:
                 display_string = f"{time_sign}{h:.{self.precision}f}h"
@@ -102,7 +119,7 @@ class TimeQuota:
     def _get_pretty_string(
         self,
         seconds: Union[int, float],
-        display: Optional[bool] = False,
+        display: bool = False,
     ) -> str:
 
         if seconds == float("inf"):
@@ -132,27 +149,29 @@ class TimeQuota:
     def _get_time_exceeded_string(self):
         if self.overflow:
             return (
-                f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']}",
-                f"Elapsed: {self._get_display_string(self.time_elapsed)}, Overflowed: {self._get_display_string(abs(self.time_remaining))}",
+                f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED!{self.color['R']} "
+                + f"Elapsed: {self._get_display_string(self.time_elapsed)}"
+                + f", Overflowed: {self._get_display_string(abs(self.time_remaining))}"
             )
         elif self.predicted_overflow:
             predicted_overflow_time = self.time_elapsed + self.time_per_step
             return (
-                f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED! [Predicted]{self.color['R']}",
-                f"Estimated: {self._get_display_string(predicted_overflow_time)}, Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}",
+                f"{self.color['g']}{self.name} {self.color['r']}⚠ TIME EXCEEDED! [Predicted]{self.color['R']} "
+                + f"Estimated: {self._get_display_string(predicted_overflow_time)}"
+                + f", Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}"
             )
 
     def _get_info_string(self, track=False):
         info_string = (
             f"{self.color['g']}{self.name} » {self.color['R']}"
-            + f"remaining: {self._get_display_string(self.time_remaining)}",
-            f"elapsed: {self._get_display_string(self.time_elapsed)}",
+            + f"remaining: {self._get_display_string(self.time_remaining)}"
+            + f", elapsed: {self._get_display_string(self.time_elapsed)}"
         )
 
         if track:
             info_string += (
-                f"this step: {self._get_display_string(self.time_this_step)}",
-                f"per step: {self._get_display_string(self.time_per_step)}",
+                f", this step: {self._get_display_string(self.time_this_step)}"
+                + f", per step: {self._get_display_string(self.time_per_step)}"
             )
 
         return info_string
@@ -160,15 +179,15 @@ class TimeQuota:
     def update(
         self,
         *,
-        verbose: Optional[bool] = True,
+        verbose: bool = True,
     ) -> bool:
         self._update_quota()
 
         if self.verbose and verbose:
             if self.time_exceeded:
-                self.logger_fn(*self._get_time_exceeded_string())
+                self.logger_fn(self._get_time_exceeded_string())
             else:
-                self.logger_fn(*self._get_info_string(), sep=", ")
+                self.logger_fn(self._get_info_string())
 
         self.time_since = self.timer_fn()
         return self.time_exceeded
@@ -176,14 +195,14 @@ class TimeQuota:
     def track(
         self,
         *,
-        verbose: Optional[bool] = True,
+        verbose: bool = True,
     ) -> bool:
         self._update_quota(track=True)
 
         if self.verbose and verbose:
-            self.logger_fn(*self._get_info_string(track=True), sep=", ")
+            self.logger_fn(self._get_info_string(track=True))
             if self.time_exceeded:
-                self.logger_fn(*self._get_time_exceeded_string())
+                self.logger_fn(self._get_time_exceeded_string())
 
         self.time_since = self.timer_fn()
         return self.time_exceeded
@@ -192,9 +211,9 @@ class TimeQuota:
         self,
         iterable: Iterable[Any],
         *,
-        time_exceeded_fn: Optional[Callable] = None,
-        time_exceeded_break: Optional[bool] = True,
-        verbose: Optional[bool] = True,
+        time_exceeded_fn: Callable = None,
+        time_exceeded_break: bool = True,
+        verbose: bool = True,
     ) -> Iterable[Any]:
         if not self.update(verbose=verbose):
             for i in iterable:
@@ -210,9 +229,9 @@ class TimeQuota:
     def range(
         self,
         *args: Any,
-        time_exceeded_fn: Optional[Callable] = None,
-        time_exceeded_break: Optional[bool] = True,
-        verbose: Optional[bool] = True,
+        time_exceeded_fn: Callable = None,
+        time_exceeded_break: bool = True,
+        verbose: bool = True,
         **kwargs: Any,
     ) -> Iterable[int]:
         return self.iter(
@@ -221,22 +240,6 @@ class TimeQuota:
             time_exceeded_break=time_exceeded_break,
             verbose=verbose,
         )
-
-    def reset(
-        self,
-    ) -> None:
-        self.time_elapsed = 0
-        self.time_remaining = self.quota
-
-        self.overflow = False
-        self.predicted_overflow = False
-        self.time_exceeded = False
-
-        self.time_steps = []
-        self.time_per_step = 0
-        self.time_this_step = 0
-
-        self.time_since = self.timer_fn()
 
     def __str__(
         self,
@@ -292,7 +295,7 @@ class TimeQuota:
     def __repr__(
         self,
     ) -> str:
-        _quota = self.quota / _time_dict.get(self.mode)
+        _quota = self.quota / _time_dict[self.mode]
 
         return (
             f"{self.__class__.__name__}"

@@ -79,7 +79,7 @@ def test_init():
 
     assert tq.step_aggr_fn == statistics.geometric_mean
     assert tq.timer_fn == time.thread_time
-    assert tq.logger_fn == None
+    assert tq.logger_fn is None
     assert tq.precision == 2
     assert len(tq.color) == 0
     assert tq.verbose == False
