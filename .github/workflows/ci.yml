@@ -36,7 +36,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Lint with Flake8
-        run: poetry run flake8 --count --show-source --statistics --config flake8.cfg
+        run: poetry run flake8 timequota --count --show-source --statistics --config flake8.cfg
 
       - name: Type check with Mypy
         run: poetry run mypy timequota --ignore-missing-imports
