@@ -15,20 +15,18 @@ jobs:
           python-version: 3.9
 
       - name: Install Poetry
-        uses: dschep/install-poetry-action@v1.2
+        uses: snok/install-poetry@v1
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v1
         id: cache
         with:
-          path: ~/.virtualenvs
-          key: poetry-$
-          restore-keys: |
-            poetry-$
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install Dependencies
-        run: poetry install
-        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
 
       - name: Lint with Flake8
         run: poetry run flake8 --count --show-source --statistics --config flake8.cfg
