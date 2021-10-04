@@ -1,3 +1,12 @@
+"""
+**Manage the time of your python script.**
+
+[[PyPI]](https://pypi.org/project/timequota/)
+[[GitHub]](https://github.com/AravRS/timequota)
+[[Demo Notebook]](https://github.com/AravRS/timequota/blob/main/demo.ipynb)
+[[Changelog]](https://github.com/AravRS/timequota/blob/main/CHANGELOG.md)
+"""
+
 import time
 from statistics import mean
 
@@ -5,7 +14,7 @@ from tabulate import tabulate
 from colorama import Fore, Style
 
 from collections import defaultdict
-from typing import Any, Iterable, Callable, Union
+from typing import Any, Iterable, Iterator, Callable, Union
 
 _time_dict = {
     "s": 1,
@@ -37,6 +46,19 @@ class TimeQuota:
         color: bool = True,
         verbose: bool = True,
     ) -> None:
+        """
+        Args:
+            quota (Union[int, float]): Maximum time limit.
+            mode (str, optional): Unit of time of *quota* given, can be one of ['s', 'm', 'h']. Defaults to 's'.
+            display_mode (str, optional): Unit of time for logging messages, can be one of ['s', 'm', 'h'] or 'p' for pretty format. Defaults to *mode*.
+            name (str, optional): Custom name for quota timer. Defaults to 'tq'.
+            step_aggr_fn (Callable[[list[float]], float], optional): Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.
+            timer_fn (Callable[[], float], optional): Function timer called before and after code execution. Defaults to time.perf_counter.
+            logger_fn (Callable[[str], None], optional): Custom info logger function. Defaults to print.
+            precision (int, optional): Custom precision for logging messages. Defaults to 4.
+            color (bool, optional): Enable or disable color. Defaults to True.
+            verbose (bool, optional): Enable or disable logging messages entirely. Defaults to True.
+        """
 
         self.mode = mode.lower()
         self.display_mode = self.mode if display_mode is None else display_mode.lower()
@@ -56,6 +78,8 @@ class TimeQuota:
     def reset(
         self,
     ) -> None:
+        """Resets quota timer to initial values."""
+
         self.time_elapsed: float = 0
         self.time_remaining: float = self.quota
 
@@ -181,6 +205,15 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -> bool:
+        """Updates the quota considering the time taken from its creation to call.
+
+        Args:
+            verbose (bool, optional): Enable or disable logging messages. Defaults to True.
+
+        Returns:
+            bool: States if time quota is exceeded.
+        """
+
         self._update_quota()
 
         if self.verbose and verbose:
@@ -197,6 +230,14 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -> bool:
+        """Tracks and stores time taken every call, used for quota overflow prediction. To be used in loops or repetitive calls.
+
+        Args:
+            verbose (bool, optional): Enable or disable logging messages. Defaults to True.
+        Returns:
+            bool: States if time quota is exceeded.
+        """
+
         self._update_quota(track=True)
 
         if self.verbose and verbose:
@@ -214,7 +255,19 @@ class TimeQuota:
         time_exceeded_fn: Callable = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
-    ) -> Iterable[Any]:
+    ) -> Iterator[Any]:
+        """Time limited iterator of the iterable. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Args:
+            iterable (Iterable[Any]): Iterable to be iterated.
+            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
+            verbose (bool, optional): Enable or disable logging messages. Defaults to True.
+
+        Yields:
+            Iterator[Any]: Element in the iterable.
+        """
+
         if not self.update(verbose=verbose):
             for i in iterable:
                 yield i
@@ -233,7 +286,18 @@ class TimeQuota:
         time_exceeded_break: bool = True,
         verbose: bool = True,
         **kwargs: Any,
-    ) -> Iterable[int]:
+    ) -> Iterator[int]:
+        """Time limited range. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Args:
+            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
+            verbose (bool, optional): Enable or disable logging messages. Defaults to True.
+
+        Yields:
+            Iterator[int]: Sequence in the given number range.
+        """
+
         return self.iter(
             iterable=range(*args, **kwargs),
             time_exceeded_fn=time_exceeded_fn,
