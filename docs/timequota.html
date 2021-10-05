@@ -47,7 +47,7 @@ from tabulate import tabulate
 from colorama import Fore, Style
 
 from collections import defaultdict
-from typing import Any, Iterable, Iterator, Callable, Union
+from typing import Any, Iterable, Iterator, Callable, Union, Literal
 
 _time_dict = {
     &#34;s&#34;: 1,
@@ -68,8 +68,8 @@ class TimeQuota:
     def __init__(
         self,
         quota: Union[int, float],
-        mode: str = &#34;s&#34;,
-        display_mode: str = None,
+        unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;] = &#34;s&#34;,
+        display_unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;, &#34;p&#34;] = None,
         *,
         name: str = &#34;tq&#34;,
         step_aggr_fn: Callable[[list[float]], float] = mean,
@@ -82,20 +82,20 @@ class TimeQuota:
         &#34;&#34;&#34;
         Args:
             quota (Union[int, float]): Maximum time limit.
-            mode (str, optional): Unit of time of *quota* given, can be one of [&#39;s&#39;, &#39;m&#39;, &#39;h&#39;]. Defaults to &#39;s&#39;.
-            display_mode (str, optional): Unit of time for logging messages, can be one of [&#39;s&#39;, &#39;m&#39;, &#39;h&#39;] or &#39;p&#39; for pretty format. Defaults to *mode*.
+            unit (Literal[s, m, h], optional): Unit of time of *quota* given, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively . Defaults to &#39;s&#39;.
+            display_unit (Literal[s, m, h, p], optional): Unit of time for logging messages, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively; or &#39;p&#39; for pretty format. Defaults to *unit*.
             name (str, optional): Custom name for quota timer. Defaults to &#39;tq&#39;.
             step_aggr_fn (Callable[[list[float]], float], optional): Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.
-            timer_fn (Callable[[], float], optional): Function timer called before and after code execution. Defaults to time.perf_counter.
+            timer_fn (Callable[[], float], optional): Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.
             logger_fn (Callable[[str], None], optional): Custom info logger function. Defaults to print.
-            precision (int, optional): Custom precision for logging messages. Defaults to 4.
+            precision (int, optional): Custom value precision for logging messages. Defaults to 4.
             color (bool, optional): Enable or disable color. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages entirely. Defaults to True.
         &#34;&#34;&#34;
 
-        self.mode = mode.lower()
-        self.display_mode = self.mode if display_mode is None else display_mode.lower()
-        self.quota = float(quota) * _time_dict[self.mode]
+        self.unit = unit.lower()
+        self.display_unit = self.unit if display_unit is None else display_unit.lower()
+        self.quota = float(quota) * _time_dict[self.unit]
 
         self.name = name
         self.step_aggr_fn = step_aggr_fn
@@ -103,7 +103,7 @@ class TimeQuota:
         self.logger_fn = logger_fn
 
         self.precision = precision
-        self.color = _color_dict if color else defaultdict(str)
+        self._color_dict = _color_dict if color else defaultdict(str)
         self.verbose = verbose
 
         self.reset()
@@ -111,7 +111,7 @@ class TimeQuota:
     def reset(
         self,
     ) -&gt; None:
-        &#34;&#34;&#34;Resets quota timer to initial values.&#34;&#34;&#34;
+        &#34;&#34;&#34;Resets time quota to initial values.&#34;&#34;&#34;
 
         self.time_elapsed: float = 0
         self.time_remaining: float = self.quota
@@ -149,7 +149,7 @@ class TimeQuota:
         seconds: Union[int, float],
     ) -&gt; str:
 
-        if self.display_mode == &#34;p&#34;:
+        if self.display_unit == &#34;p&#34;:
             return self._get_pretty_string(seconds)
 
         if seconds == float(&#34;inf&#34;):
@@ -162,16 +162,16 @@ class TimeQuota:
             m = seconds / _time_dict[&#34;m&#34;]
             h = seconds / _time_dict[&#34;h&#34;]
 
-            if self.display_mode == &#34;h&#34; and h &gt; 0:
+            if self.display_unit == &#34;h&#34; and h &gt; 0:
                 display_string = f&#34;{time_sign}{h:.{self.precision}f}h&#34;
-            elif self.display_mode == &#34;m&#34; and m &gt; 0:
+            elif self.display_unit == &#34;m&#34; and m &gt; 0:
                 display_string = f&#34;{time_sign}{m:.{self.precision}f}m&#34;
-            elif self.display_mode == &#34;s&#34; and s &gt; 0:
+            elif self.display_unit == &#34;s&#34; and s &gt; 0:
                 display_string = f&#34;{time_sign}{s:.{self.precision}f}s&#34;
             else:
                 display_string = &#34;―&#34;
 
-        return self.color[&#34;c&#34;] + display_string + self.color[&#34;R&#34;]
+        return self._color_dict[&#34;c&#34;] + display_string + self._color_dict[&#34;R&#34;]
 
     def _get_pretty_string(
         self,
@@ -201,28 +201,28 @@ class TimeQuota:
             else:
                 pretty_string = &#34;―&#34;
 
-        return self.color[&#34;c&#34;] + pretty_string + self.color[&#34;R&#34;]
+        return self._color_dict[&#34;c&#34;] + pretty_string + self._color_dict[&#34;R&#34;]
 
     def _get_time_exceeded_string(self):
         if self.overflow:
             return (
-                f&#34;{self.color[&#39;g&#39;]}{self.name} {self.color[&#39;r&#39;]}⚠ TIME EXCEEDED!{self.color[&#39;R&#39;]} &#34;
-                + f&#34;Elapsed: {self._get_display_string(self.time_elapsed)}&#34;
-                + f&#34;, Overflowed: {self._get_display_string(abs(self.time_remaining))}&#34;
+                f&#34;{self._color_dict[&#39;g&#39;]}{self.name} {self._color_dict[&#39;r&#39;]}⚠ TIME EXCEEDED!{self._color_dict[&#39;R&#39;]} &#34;
+                f&#34;Elapsed: {self._get_display_string(self.time_elapsed)}&#34;
+                f&#34;, Overflowed: {self._get_display_string(abs(self.time_remaining))}&#34;
             )
         elif self.predicted_overflow:
             predicted_overflow_time = self.time_elapsed + self.time_per_step
             return (
-                f&#34;{self.color[&#39;g&#39;]}{self.name} {self.color[&#39;r&#39;]}⚠ TIME EXCEEDED! [Predicted]{self.color[&#39;R&#39;]} &#34;
-                + f&#34;Estimated: {self._get_display_string(predicted_overflow_time)}&#34;
-                + f&#34;, Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}&#34;
+                f&#34;{self._color_dict[&#39;g&#39;]}{self.name} {self._color_dict[&#39;r&#39;]}⚠ TIME EXCEEDED! [Predicted]{self._color_dict[&#39;R&#39;]} &#34;
+                f&#34;Estimated: {self._get_display_string(predicted_overflow_time)}&#34;
+                f&#34;, Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}&#34;
             )
 
     def _get_info_string(self, track=False):
         info_string = (
-            f&#34;{self.color[&#39;g&#39;]}{self.name} » {self.color[&#39;R&#39;]}&#34;
-            + f&#34;remaining: {self._get_display_string(self.time_remaining)}&#34;
-            + f&#34;, elapsed: {self._get_display_string(self.time_elapsed)}&#34;
+            f&#34;{self._color_dict[&#39;g&#39;]}{self.name} » {self._color_dict[&#39;R&#39;]}&#34;
+            f&#34;remaining: {self._get_display_string(self.time_remaining)}&#34;
+            f&#34;, elapsed: {self._get_display_string(self.time_elapsed)}&#34;
         )
 
         if track:
@@ -244,7 +244,7 @@ class TimeQuota:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
         Returns:
-            bool: States if time quota is exceeded.
+            bool: States if quota is exceeded.
         &#34;&#34;&#34;
 
         self._update_quota()
@@ -263,12 +263,12 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -&gt; bool:
-        &#34;&#34;&#34;Tracks and stores time taken every call, used for quota overflow prediction. To be used in loops or repetitive calls.
+        &#34;&#34;&#34;Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
         Returns:
-            bool: States if time quota is exceeded.
+            bool: States if quota is exceeded.
         &#34;&#34;&#34;
 
         self._update_quota(track=True)
@@ -289,7 +289,7 @@ class TimeQuota:
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -&gt; Iterator[Any]:
-        &#34;&#34;&#34;Time limited iterator of the iterable. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
@@ -320,7 +320,7 @@ class TimeQuota:
         verbose: bool = True,
         **kwargs: Any,
     ) -&gt; Iterator[int]:
-        &#34;&#34;&#34;Time limited range. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
 
         Args:
             time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
@@ -342,17 +342,23 @@ class TimeQuota:
         self,
     ) -&gt; str:
         headers = [
-            f&#34;{self.color[&#39;g&#39;]}{self.name}{self.color[&#39;R&#39;]}&#34;,
-            f&#34;{self.color[&#39;y&#39;]}Time{self.color[&#39;R&#39;]}&#34;,
-            f&#34;{self.color[&#39;y&#39;]}Time ({self.display_mode}){self.color[&#39;R&#39;]}&#34;,
+            f&#34;{self._color_dict[&#39;g&#39;]}{self.name}{self._color_dict[&#39;R&#39;]}&#34;,
+            f&#34;{self._color_dict[&#39;y&#39;]}Time{self._color_dict[&#39;R&#39;]}&#34;,
+            f&#34;{self._color_dict[&#39;y&#39;]}Time ({self.display_unit}){self._color_dict[&#39;R&#39;]}&#34;,
         ]
 
         if self.overflow:
-            time_exceeded_string = self.color[&#34;r&#34;] + &#34;True&#34; + self.color[&#34;R&#34;]
+            time_exceeded_string = (
+                self._color_dict[&#34;r&#34;] + &#34;True&#34; + self._color_dict[&#34;R&#34;]
+            )
         elif self.predicted_overflow:
-            time_exceeded_string = self.color[&#34;r&#34;] + &#34;Predicted&#34; + self.color[&#34;R&#34;]
+            time_exceeded_string = (
+                self._color_dict[&#34;r&#34;] + &#34;Predicted&#34; + self._color_dict[&#34;R&#34;]
+            )
         else:
-            time_exceeded_string = self.color[&#34;c&#34;] + &#34;False&#34; + self.color[&#34;R&#34;]
+            time_exceeded_string = (
+                self._color_dict[&#34;c&#34;] + &#34;False&#34; + self._color_dict[&#34;R&#34;]
+            )
 
         table = [
             [
@@ -392,13 +398,20 @@ class TimeQuota:
     def __repr__(
         self,
     ) -&gt; str:
-        _quota = self.quota / _time_dict[self.mode]
+        _quota = self.quota / _time_dict[self.unit]
 
         return (
             f&#34;{self.__class__.__name__}&#34;
-            + &#34;(&#34;
-            + f&#34;{_quota!r}, {self.mode!r}, {self.display_mode!r}, {self.name!r}&#34;
-            + &#34;)&#34;
+            &#34;(&#34;
+            f&#34;{_quota!r}, {self.unit!r}, {self.display_unit!r}, &#34;
+            f&#34;name={self.name!r}, &#34;
+            f&#34;step_aggr_fn={self.step_aggr_fn!r}, &#34;
+            f&#34;timer_fn={self.timer_fn!r}, &#34;
+            f&#34;logger_fn={self.logger_fn!r}, &#34;
+            f&#34;precision={self.precision!r}, &#34;
+            f&#34;color={any(self._color_dict.values())!r}, &#34;
+            f&#34;verbose={self.verbose!r}&#34;
+            &#34;)&#34;
         )</code></pre>
 </details>
 </section>
@@ -413,27 +426,27 @@ class TimeQuota:
 <dl>
 <dt id="timequota.TimeQuota"><code class="flex name class">
 <span>class <span class="ident">TimeQuota</span></span>
-<span>(</span><span>quota: Union[int, float], mode: str = 's', display_mode: str = None, *, name: str = 'tq', step_aggr_fn: Callable[[list[float]], float] = &lt;function mean&gt;, timer_fn: Callable[[], float] = &lt;built-in function perf_counter&gt;, logger_fn: Callable[[str], None] = &lt;built-in function print&gt;, precision: int = 4, color: bool = True, verbose: bool = True)</span>
+<span>(</span><span>quota: Union[int, float], unit: Literal['s', 'm', 'h'] = 's', display_unit: Literal['s', 'm', 'h', 'p'] = None, *, name: str = 'tq', step_aggr_fn: Callable[[list[float]], float] = &lt;function mean&gt;, timer_fn: Callable[[], float] = &lt;built-in function perf_counter&gt;, logger_fn: Callable[[str], None] = &lt;built-in function print&gt;, precision: int = 4, color: bool = True, verbose: bool = True)</span>
 </code></dt>
 <dd>
 <div class="desc"><h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>quota</code></strong> :&ensp;<code>Union[int, float]</code></dt>
 <dd>Maximum time limit.</dd>
-<dt><strong><code>mode</code></strong> :&ensp;<code>str</code>, optional</dt>
-<dd>Unit of time of <em>quota</em> given, can be one of ['s', 'm', 'h']. Defaults to 's'.</dd>
-<dt><strong><code>display_mode</code></strong> :&ensp;<code>str</code>, optional</dt>
-<dd>Unit of time for logging messages, can be one of ['s', 'm', 'h'] or 'p' for pretty format. Defaults to <em>mode</em>.</dd>
+<dt><strong><code>unit</code></strong> :&ensp;<code>Literal[s, m, h]</code>, optional</dt>
+<dd>Unit of time of <em>quota</em> given, can be one of 's', 'm' or 'h' for seconds, minutes, or hours respectively . Defaults to 's'.</dd>
+<dt><strong><code>display_unit</code></strong> :&ensp;<code>Literal[s, m, h, p]</code>, optional</dt>
+<dd>Unit of time for logging messages, can be one of 's', 'm' or 'h' for seconds, minutes, or hours respectively; or 'p' for pretty format. Defaults to <em>unit</em>.</dd>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Custom name for quota timer. Defaults to 'tq'.</dd>
 <dt><strong><code>step_aggr_fn</code></strong> :&ensp;<code>Callable[[list[float]], float]</code>, optional</dt>
 <dd>Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.</dd>
 <dt><strong><code>timer_fn</code></strong> :&ensp;<code>Callable[[], float]</code>, optional</dt>
-<dd>Function timer called before and after code execution. Defaults to time.perf_counter.</dd>
+<dd>Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.</dd>
 <dt><strong><code>logger_fn</code></strong> :&ensp;<code>Callable[[str], None]</code>, optional</dt>
 <dd>Custom info logger function. Defaults to print.</dd>
 <dt><strong><code>precision</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>Custom precision for logging messages. Defaults to 4.</dd>
+<dd>Custom value precision for logging messages. Defaults to 4.</dd>
 <dt><strong><code>color</code></strong> :&ensp;<code>bool</code>, optional</dt>
 <dd>Enable or disable color. Defaults to True.</dd>
 <dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code>, optional</dt>
@@ -447,8 +460,8 @@ class TimeQuota:
     def __init__(
         self,
         quota: Union[int, float],
-        mode: str = &#34;s&#34;,
-        display_mode: str = None,
+        unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;] = &#34;s&#34;,
+        display_unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;, &#34;p&#34;] = None,
         *,
         name: str = &#34;tq&#34;,
         step_aggr_fn: Callable[[list[float]], float] = mean,
@@ -461,20 +474,20 @@ class TimeQuota:
         &#34;&#34;&#34;
         Args:
             quota (Union[int, float]): Maximum time limit.
-            mode (str, optional): Unit of time of *quota* given, can be one of [&#39;s&#39;, &#39;m&#39;, &#39;h&#39;]. Defaults to &#39;s&#39;.
-            display_mode (str, optional): Unit of time for logging messages, can be one of [&#39;s&#39;, &#39;m&#39;, &#39;h&#39;] or &#39;p&#39; for pretty format. Defaults to *mode*.
+            unit (Literal[s, m, h], optional): Unit of time of *quota* given, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively . Defaults to &#39;s&#39;.
+            display_unit (Literal[s, m, h, p], optional): Unit of time for logging messages, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively; or &#39;p&#39; for pretty format. Defaults to *unit*.
             name (str, optional): Custom name for quota timer. Defaults to &#39;tq&#39;.
             step_aggr_fn (Callable[[list[float]], float], optional): Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.
-            timer_fn (Callable[[], float], optional): Function timer called before and after code execution. Defaults to time.perf_counter.
+            timer_fn (Callable[[], float], optional): Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.
             logger_fn (Callable[[str], None], optional): Custom info logger function. Defaults to print.
-            precision (int, optional): Custom precision for logging messages. Defaults to 4.
+            precision (int, optional): Custom value precision for logging messages. Defaults to 4.
             color (bool, optional): Enable or disable color. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages entirely. Defaults to True.
         &#34;&#34;&#34;
 
-        self.mode = mode.lower()
-        self.display_mode = self.mode if display_mode is None else display_mode.lower()
-        self.quota = float(quota) * _time_dict[self.mode]
+        self.unit = unit.lower()
+        self.display_unit = self.unit if display_unit is None else display_unit.lower()
+        self.quota = float(quota) * _time_dict[self.unit]
 
         self.name = name
         self.step_aggr_fn = step_aggr_fn
@@ -482,7 +495,7 @@ class TimeQuota:
         self.logger_fn = logger_fn
 
         self.precision = precision
-        self.color = _color_dict if color else defaultdict(str)
+        self._color_dict = _color_dict if color else defaultdict(str)
         self.verbose = verbose
 
         self.reset()
@@ -490,7 +503,7 @@ class TimeQuota:
     def reset(
         self,
     ) -&gt; None:
-        &#34;&#34;&#34;Resets quota timer to initial values.&#34;&#34;&#34;
+        &#34;&#34;&#34;Resets time quota to initial values.&#34;&#34;&#34;
 
         self.time_elapsed: float = 0
         self.time_remaining: float = self.quota
@@ -528,7 +541,7 @@ class TimeQuota:
         seconds: Union[int, float],
     ) -&gt; str:
 
-        if self.display_mode == &#34;p&#34;:
+        if self.display_unit == &#34;p&#34;:
             return self._get_pretty_string(seconds)
 
         if seconds == float(&#34;inf&#34;):
@@ -541,16 +554,16 @@ class TimeQuota:
             m = seconds / _time_dict[&#34;m&#34;]
             h = seconds / _time_dict[&#34;h&#34;]
 
-            if self.display_mode == &#34;h&#34; and h &gt; 0:
+            if self.display_unit == &#34;h&#34; and h &gt; 0:
                 display_string = f&#34;{time_sign}{h:.{self.precision}f}h&#34;
-            elif self.display_mode == &#34;m&#34; and m &gt; 0:
+            elif self.display_unit == &#34;m&#34; and m &gt; 0:
                 display_string = f&#34;{time_sign}{m:.{self.precision}f}m&#34;
-            elif self.display_mode == &#34;s&#34; and s &gt; 0:
+            elif self.display_unit == &#34;s&#34; and s &gt; 0:
                 display_string = f&#34;{time_sign}{s:.{self.precision}f}s&#34;
             else:
                 display_string = &#34;―&#34;
 
-        return self.color[&#34;c&#34;] + display_string + self.color[&#34;R&#34;]
+        return self._color_dict[&#34;c&#34;] + display_string + self._color_dict[&#34;R&#34;]
 
     def _get_pretty_string(
         self,
@@ -580,28 +593,28 @@ class TimeQuota:
             else:
                 pretty_string = &#34;―&#34;
 
-        return self.color[&#34;c&#34;] + pretty_string + self.color[&#34;R&#34;]
+        return self._color_dict[&#34;c&#34;] + pretty_string + self._color_dict[&#34;R&#34;]
 
     def _get_time_exceeded_string(self):
         if self.overflow:
             return (
-                f&#34;{self.color[&#39;g&#39;]}{self.name} {self.color[&#39;r&#39;]}⚠ TIME EXCEEDED!{self.color[&#39;R&#39;]} &#34;
-                + f&#34;Elapsed: {self._get_display_string(self.time_elapsed)}&#34;
-                + f&#34;, Overflowed: {self._get_display_string(abs(self.time_remaining))}&#34;
+                f&#34;{self._color_dict[&#39;g&#39;]}{self.name} {self._color_dict[&#39;r&#39;]}⚠ TIME EXCEEDED!{self._color_dict[&#39;R&#39;]} &#34;
+                f&#34;Elapsed: {self._get_display_string(self.time_elapsed)}&#34;
+                f&#34;, Overflowed: {self._get_display_string(abs(self.time_remaining))}&#34;
             )
         elif self.predicted_overflow:
             predicted_overflow_time = self.time_elapsed + self.time_per_step
             return (
-                f&#34;{self.color[&#39;g&#39;]}{self.name} {self.color[&#39;r&#39;]}⚠ TIME EXCEEDED! [Predicted]{self.color[&#39;R&#39;]} &#34;
-                + f&#34;Estimated: {self._get_display_string(predicted_overflow_time)}&#34;
-                + f&#34;, Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}&#34;
+                f&#34;{self._color_dict[&#39;g&#39;]}{self.name} {self._color_dict[&#39;r&#39;]}⚠ TIME EXCEEDED! [Predicted]{self._color_dict[&#39;R&#39;]} &#34;
+                f&#34;Estimated: {self._get_display_string(predicted_overflow_time)}&#34;
+                f&#34;, Overflow: {self._get_display_string(predicted_overflow_time - self.quota)}&#34;
             )
 
     def _get_info_string(self, track=False):
         info_string = (
-            f&#34;{self.color[&#39;g&#39;]}{self.name} » {self.color[&#39;R&#39;]}&#34;
-            + f&#34;remaining: {self._get_display_string(self.time_remaining)}&#34;
-            + f&#34;, elapsed: {self._get_display_string(self.time_elapsed)}&#34;
+            f&#34;{self._color_dict[&#39;g&#39;]}{self.name} » {self._color_dict[&#39;R&#39;]}&#34;
+            f&#34;remaining: {self._get_display_string(self.time_remaining)}&#34;
+            f&#34;, elapsed: {self._get_display_string(self.time_elapsed)}&#34;
         )
 
         if track:
@@ -623,7 +636,7 @@ class TimeQuota:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
         Returns:
-            bool: States if time quota is exceeded.
+            bool: States if quota is exceeded.
         &#34;&#34;&#34;
 
         self._update_quota()
@@ -642,12 +655,12 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -&gt; bool:
-        &#34;&#34;&#34;Tracks and stores time taken every call, used for quota overflow prediction. To be used in loops or repetitive calls.
+        &#34;&#34;&#34;Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
         Returns:
-            bool: States if time quota is exceeded.
+            bool: States if quota is exceeded.
         &#34;&#34;&#34;
 
         self._update_quota(track=True)
@@ -668,7 +681,7 @@ class TimeQuota:
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -&gt; Iterator[Any]:
-        &#34;&#34;&#34;Time limited iterator of the iterable. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
@@ -699,7 +712,7 @@ class TimeQuota:
         verbose: bool = True,
         **kwargs: Any,
     ) -&gt; Iterator[int]:
-        &#34;&#34;&#34;Time limited range. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
 
         Args:
             time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
@@ -721,17 +734,23 @@ class TimeQuota:
         self,
     ) -&gt; str:
         headers = [
-            f&#34;{self.color[&#39;g&#39;]}{self.name}{self.color[&#39;R&#39;]}&#34;,
-            f&#34;{self.color[&#39;y&#39;]}Time{self.color[&#39;R&#39;]}&#34;,
-            f&#34;{self.color[&#39;y&#39;]}Time ({self.display_mode}){self.color[&#39;R&#39;]}&#34;,
+            f&#34;{self._color_dict[&#39;g&#39;]}{self.name}{self._color_dict[&#39;R&#39;]}&#34;,
+            f&#34;{self._color_dict[&#39;y&#39;]}Time{self._color_dict[&#39;R&#39;]}&#34;,
+            f&#34;{self._color_dict[&#39;y&#39;]}Time ({self.display_unit}){self._color_dict[&#39;R&#39;]}&#34;,
         ]
 
         if self.overflow:
-            time_exceeded_string = self.color[&#34;r&#34;] + &#34;True&#34; + self.color[&#34;R&#34;]
+            time_exceeded_string = (
+                self._color_dict[&#34;r&#34;] + &#34;True&#34; + self._color_dict[&#34;R&#34;]
+            )
         elif self.predicted_overflow:
-            time_exceeded_string = self.color[&#34;r&#34;] + &#34;Predicted&#34; + self.color[&#34;R&#34;]
+            time_exceeded_string = (
+                self._color_dict[&#34;r&#34;] + &#34;Predicted&#34; + self._color_dict[&#34;R&#34;]
+            )
         else:
-            time_exceeded_string = self.color[&#34;c&#34;] + &#34;False&#34; + self.color[&#34;R&#34;]
+            time_exceeded_string = (
+                self._color_dict[&#34;c&#34;] + &#34;False&#34; + self._color_dict[&#34;R&#34;]
+            )
 
         table = [
             [
@@ -771,13 +790,20 @@ class TimeQuota:
     def __repr__(
         self,
     ) -&gt; str:
-        _quota = self.quota / _time_dict[self.mode]
+        _quota = self.quota / _time_dict[self.unit]
 
         return (
             f&#34;{self.__class__.__name__}&#34;
-            + &#34;(&#34;
-            + f&#34;{_quota!r}, {self.mode!r}, {self.display_mode!r}, {self.name!r}&#34;
-            + &#34;)&#34;
+            &#34;(&#34;
+            f&#34;{_quota!r}, {self.unit!r}, {self.display_unit!r}, &#34;
+            f&#34;name={self.name!r}, &#34;
+            f&#34;step_aggr_fn={self.step_aggr_fn!r}, &#34;
+            f&#34;timer_fn={self.timer_fn!r}, &#34;
+            f&#34;logger_fn={self.logger_fn!r}, &#34;
+            f&#34;precision={self.precision!r}, &#34;
+            f&#34;color={any(self._color_dict.values())!r}, &#34;
+            f&#34;verbose={self.verbose!r}&#34;
+            &#34;)&#34;
         )</code></pre>
 </details>
 <h3>Methods</h3>
@@ -786,7 +812,7 @@ class TimeQuota:
 <span>def <span class="ident">iter</span></span>(<span>self, iterable: Iterable[Any], *, time_exceeded_fn: Callable = None, time_exceeded_break: bool = True, verbose: bool = True) ‑> Iterator[Any]</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Time limited iterator of the iterable. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
+<div class="desc"><p>Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>iterable</code></strong> :&ensp;<code>Iterable[Any]</code></dt>
@@ -815,7 +841,7 @@ class TimeQuota:
     time_exceeded_break: bool = True,
     verbose: bool = True,
 ) -&gt; Iterator[Any]:
-    &#34;&#34;&#34;Time limited iterator of the iterable. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+    &#34;&#34;&#34;Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
 
     Args:
         iterable (Iterable[Any]): Iterable to be iterated.
@@ -843,7 +869,7 @@ class TimeQuota:
 <span>def <span class="ident">range</span></span>(<span>self, *args: Any, time_exceeded_fn: Callable = None, time_exceeded_break: bool = True, verbose: bool = True, **kwargs: Any) ‑> Iterator[int]</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Time limited range. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
+<div class="desc"><p>Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>time_exceeded_fn</code></strong> :&ensp;<code>Callable</code>, optional</dt>
@@ -870,7 +896,7 @@ class TimeQuota:
     verbose: bool = True,
     **kwargs: Any,
 ) -&gt; Iterator[int]:
-    &#34;&#34;&#34;Time limited range. When called updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+    &#34;&#34;&#34;Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
 
     Args:
         time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
@@ -893,7 +919,7 @@ class TimeQuota:
 <span>def <span class="ident">reset</span></span>(<span>self) ‑> None</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Resets quota timer to initial values.</p></div>
+<div class="desc"><p>Resets time quota to initial values.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -901,7 +927,7 @@ class TimeQuota:
 <pre><code class="python">def reset(
     self,
 ) -&gt; None:
-    &#34;&#34;&#34;Resets quota timer to initial values.&#34;&#34;&#34;
+    &#34;&#34;&#34;Resets time quota to initial values.&#34;&#34;&#34;
 
     self.time_elapsed: float = 0
     self.time_remaining: float = self.quota
@@ -921,7 +947,7 @@ class TimeQuota:
 <span>def <span class="ident">track</span></span>(<span>self, *, verbose: bool = True) ‑> bool</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Tracks and stores time taken every call, used for quota overflow prediction. To be used in loops or repetitive calls.</p>
+<div class="desc"><p>Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code>, optional</dt>
@@ -930,7 +956,7 @@ class TimeQuota:
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>bool</code></dt>
-<dd>States if time quota is exceeded.</dd>
+<dd>States if quota is exceeded.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -941,12 +967,12 @@ class TimeQuota:
     *,
     verbose: bool = True,
 ) -&gt; bool:
-    &#34;&#34;&#34;Tracks and stores time taken every call, used for quota overflow prediction. To be used in loops or repetitive calls.
+    &#34;&#34;&#34;Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
     Args:
         verbose (bool, optional): Enable or disable logging messages. Defaults to True.
     Returns:
-        bool: States if time quota is exceeded.
+        bool: States if quota is exceeded.
     &#34;&#34;&#34;
 
     self._update_quota(track=True)
@@ -973,7 +999,7 @@ class TimeQuota:
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>bool</code></dt>
-<dd>States if time quota is exceeded.</dd>
+<dd>States if quota is exceeded.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -990,7 +1016,7 @@ class TimeQuota:
         verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
     Returns:
-        bool: States if time quota is exceeded.
+        bool: States if quota is exceeded.
     &#34;&#34;&#34;
 
     self._update_quota()
