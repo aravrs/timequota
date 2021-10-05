@@ -9,8 +9,8 @@ def test_init():
     tq = TimeQuota(5, "s", name="init")
 
     assert tq.quota == 5.0
-    assert tq.mode == "s"
-    assert tq.display_mode == "s"
+    assert tq.unit == "s"
+    assert tq.display_unit == "s"
     assert tq.name == "init"
 
     assert tq.time_since != 0
@@ -28,19 +28,19 @@ def test_init():
     assert tq.timer_fn == time.perf_counter
     assert tq.logger_fn == print
     assert tq.precision == 4
-    assert len(tq.color) != 0
+    assert any(tq._color_dict.values())
     assert tq.verbose == True
 
     # minutes
     tq = TimeQuota(5, "m", name="init-minutes", verbose=False)
-    assert tq.mode == "m"
-    assert tq.display_mode == "m"
+    assert tq.unit == "m"
+    assert tq.display_unit == "m"
     assert tq.quota == 5.0 * 60
 
     # hours
     tq = TimeQuota(5, "h", name="init-minutes", verbose=False)
-    assert tq.mode == "h"
-    assert tq.display_mode == "h"
+    assert tq.unit == "h"
+    assert tq.display_unit == "h"
     assert tq.quota == 5.0 * (60 * 60)
 
     # infinite
@@ -62,8 +62,8 @@ def test_init():
     )
 
     assert tq.quota == 26.0 * 60
-    assert tq.mode == "m"
-    assert tq.display_mode == "p"
+    assert tq.unit == "m"
+    assert tq.display_unit == "p"
     assert tq.name == "init-custom"
 
     assert tq.time_since != 0
@@ -81,7 +81,7 @@ def test_init():
     assert tq.timer_fn == time.thread_time
     assert tq.logger_fn is None
     assert tq.precision == 2
-    assert len(tq.color) == 0
+    assert not any(tq._color_dict.values())
     assert tq.verbose == False
 
 
