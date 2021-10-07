@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.0.5
+
+🚀 RELEASE:
+
+- Initial complete release
+
 ### 0.0.4
 
 💥 NEW:
