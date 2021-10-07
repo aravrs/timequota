@@ -78,7 +78,9 @@ class TimeQuota:
     def reset(
         self,
     ) -> None:
-        """Resets time quota to initial values."""
+        """
+        Resets time quota to initial values.
+        """
 
         self.time_elapsed: float = 0
         self.time_remaining: float = self.quota
@@ -205,7 +207,8 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -> bool:
-        """Updates the quota considering the time taken from its creation to call.
+        """
+        Updates the quota considering the time taken from its creation to call.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -230,7 +233,8 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -> bool:
-        """Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
+        """
+        Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -256,7 +260,12 @@ class TimeQuota:
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -> Iterator[Any]:
-        """Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        """
+        Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Iteration stops (default) under two conditions:
+        (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+        (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
@@ -287,7 +296,12 @@ class TimeQuota:
         verbose: bool = True,
         **kwargs: Any,
     ) -> Iterator[int]:
-        """Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        """
+        Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Iteration stops (default) under two conditions:
+            (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+            (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
             time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.

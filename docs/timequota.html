@@ -14,6 +14,9 @@
 <style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
 <script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+<style>a{color:#2d7334}a:hover{color:#34b458}.ident{color:#34b458;font-weight:600;font-family:"Poppins",sans-serif}.name{background:#effaf1}dt:target .name{background:#e7f8c9}</style>
+<style>.homelink{display:block;color:#111827;font-family:"Poppins",sans-serif;font-size:2em;font-weight:500;padding-bottom:0.5em}.homelink:hover{color:#2d7334}.homelink img{max-width:30%;max-height:5em;margin:auto;margin-bottom:0.3em}</style>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet" />
 </head>
 <body>
 <main>
@@ -111,7 +114,9 @@ class TimeQuota:
     def reset(
         self,
     ) -&gt; None:
-        &#34;&#34;&#34;Resets time quota to initial values.&#34;&#34;&#34;
+        &#34;&#34;&#34;
+        Resets time quota to initial values.
+        &#34;&#34;&#34;
 
         self.time_elapsed: float = 0
         self.time_remaining: float = self.quota
@@ -238,7 +243,8 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -&gt; bool:
-        &#34;&#34;&#34;Updates the quota considering the time taken from its creation to call.
+        &#34;&#34;&#34;
+        Updates the quota considering the time taken from its creation to call.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -263,7 +269,8 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -&gt; bool:
-        &#34;&#34;&#34;Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
+        &#34;&#34;&#34;
+        Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -289,7 +296,12 @@ class TimeQuota:
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -&gt; Iterator[Any]:
-        &#34;&#34;&#34;Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;
+        Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Iteration stops (default) under two conditions:
+        (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+        (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
@@ -320,7 +332,12 @@ class TimeQuota:
         verbose: bool = True,
         **kwargs: Any,
     ) -&gt; Iterator[int]:
-        &#34;&#34;&#34;Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;
+        Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Iteration stops (default) under two conditions:
+            (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+            (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
             time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
@@ -503,7 +520,9 @@ class TimeQuota:
     def reset(
         self,
     ) -&gt; None:
-        &#34;&#34;&#34;Resets time quota to initial values.&#34;&#34;&#34;
+        &#34;&#34;&#34;
+        Resets time quota to initial values.
+        &#34;&#34;&#34;
 
         self.time_elapsed: float = 0
         self.time_remaining: float = self.quota
@@ -630,7 +649,8 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -&gt; bool:
-        &#34;&#34;&#34;Updates the quota considering the time taken from its creation to call.
+        &#34;&#34;&#34;
+        Updates the quota considering the time taken from its creation to call.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -655,7 +675,8 @@ class TimeQuota:
         *,
         verbose: bool = True,
     ) -&gt; bool:
-        &#34;&#34;&#34;Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
+        &#34;&#34;&#34;
+        Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
         Args:
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -681,7 +702,12 @@ class TimeQuota:
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -&gt; Iterator[Any]:
-        &#34;&#34;&#34;Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;
+        Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Iteration stops (default) under two conditions:
+        (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+        (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
@@ -712,7 +738,12 @@ class TimeQuota:
         verbose: bool = True,
         **kwargs: Any,
     ) -&gt; Iterator[int]:
-        &#34;&#34;&#34;Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+        &#34;&#34;&#34;
+        Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+        Iteration stops (default) under two conditions:
+            (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+            (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
             time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
@@ -813,6 +844,10 @@ class TimeQuota:
 </code></dt>
 <dd>
 <div class="desc"><p>Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
+<p>Iteration stops (default) under two conditions:
+(i) Exhaustion - Time taken by the iteration has already
+exceeded the time quota and overflow occurs.
+(ii) Predicted exhaustion - The time taken by the next iteration (calculated by the <em>step_aggr_fn</em>) will exceed the time quota.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>iterable</code></strong> :&ensp;<code>Iterable[Any]</code></dt>
@@ -841,7 +876,12 @@ class TimeQuota:
     time_exceeded_break: bool = True,
     verbose: bool = True,
 ) -&gt; Iterator[Any]:
-    &#34;&#34;&#34;Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+    &#34;&#34;&#34;
+    Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+    Iteration stops (default) under two conditions:
+    (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+    (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
     Args:
         iterable (Iterable[Any]): Iterable to be iterated.
@@ -870,6 +910,10 @@ class TimeQuota:
 </code></dt>
 <dd>
 <div class="desc"><p>Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
+<p>Iteration stops (default) under two conditions:
+(i) Exhaustion - Time taken by the iteration has already
+exceeded the time quota and overflow occurs.
+(ii) Predicted exhaustion - The time taken by the next iteration (calculated by the <em>step_aggr_fn</em>) will exceed the time quota.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>time_exceeded_fn</code></strong> :&ensp;<code>Callable</code>, optional</dt>
@@ -896,7 +940,12 @@ class TimeQuota:
     verbose: bool = True,
     **kwargs: Any,
 ) -&gt; Iterator[int]:
-    &#34;&#34;&#34;Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+    &#34;&#34;&#34;
+    Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).
+
+    Iteration stops (default) under two conditions:
+        (i) Exhaustion - Time taken by the iteration has already  exceeded the time quota and overflow occurs.
+        (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
     Args:
         time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
@@ -927,7 +976,9 @@ class TimeQuota:
 <pre><code class="python">def reset(
     self,
 ) -&gt; None:
-    &#34;&#34;&#34;Resets time quota to initial values.&#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Resets time quota to initial values.
+    &#34;&#34;&#34;
 
     self.time_elapsed: float = 0
     self.time_remaining: float = self.quota
@@ -967,7 +1018,8 @@ class TimeQuota:
     *,
     verbose: bool = True,
 ) -&gt; bool:
-    &#34;&#34;&#34;Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
+    &#34;&#34;&#34;
+    Tracks, stores and updates the time taken every call, also used for quota overflow prediction. To be used in loops or repetitive calls.
 
     Args:
         verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -1010,7 +1062,8 @@ class TimeQuota:
     *,
     verbose: bool = True,
 ) -&gt; bool:
-    &#34;&#34;&#34;Updates the quota considering the time taken from its creation to call.
+    &#34;&#34;&#34;
+    Updates the quota considering the time taken from its creation to call.
 
     Args:
         verbose (bool, optional): Enable or disable logging messages. Defaults to True.
@@ -1037,6 +1090,12 @@ class TimeQuota:
 </section>
 </article>
 <nav id="sidebar">
+<header>
+<a class="homelink" rel="home" title="timequota Home" href="./index.html">
+<img src="https://user-images.githubusercontent.com/43105734/136404087-dc5264cf-ac09-4a87-b7a0-254f64eec7a4.png" alt="">
+timequota
+</a>
+</header>
 <h1>Index</h1>
 <div class="toc">
 <ul></ul>

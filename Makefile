@@ -8,4 +8,4 @@ run-tests:
 	pytest --cov-report term-missing --black --cov=tests/
 
 make-docs:
-	pdoc --html --force --output-dir docs timequota/timequota.py
+	pdoc --html --force --output-dir docs timequota/timequota.py --template-dir docs/config
