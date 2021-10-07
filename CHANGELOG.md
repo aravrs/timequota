@@ -1,5 +1,42 @@
 ## Changelog
 
+### 0.0.4
+
+💥 NEW:
+
+- Updated `.iter()` and `range()`
+
+🚑 Hotfix:
+
+- Handle overflow in range & iter
+
+👌 Improve:
+
+- Added color, updated table & visuals
+- Added timer, logger & color options
+- Added type hints
+
+✅ Tests:
+
+- Setup tests
+- Added basic tests
+
+📦 Configuration:
+
+- Setup poetry
+- Setup CI workflow
+
+📖 DOC:
+
+- Setup documentation
+- Added docstrings
+- Added logos
+- Updated readmes
+
+🔨 Refactor Code:
+
+- Enhancements, improvements and fixes
+
 ### 0.0.3
 
 💥 NEW:

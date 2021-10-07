@@ -2,12 +2,17 @@ import setuptools
 
 setuptools.setup(
     name="timequota",
-    version="0.0.3",
+    version="0.0.4",
     author="AravRS",
     description="Manage the time of your script",
     long_description=open("PyPI.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/AravRS/timequota",
+    url="https://aravrs.github.io/timequota",
+    project_urls={
+        "Source": "https://github.com/AravRS/timequota",
+        "Documentation": "https://aravrs.github.io/timequota/timequota.html",
+        "Changelog": "https://github.com/aravrs/timequota/blob/main/CHANGELOG.md",
+    },
     license="MIT",
     packages=setuptools.find_packages(),
     classifiers=[
