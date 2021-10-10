@@ -234,7 +234,7 @@ class TimeQuota:
 
         self._update_quota()
 
-        if self.verbose and verbose:
+        if (self.verbose and verbose) and self.logger_fn is not None:
             if self.time_exceeded:
                 self.logger_fn(self._get_time_exceeded_string())
             else:
@@ -259,7 +259,7 @@ class TimeQuota:
 
         self._update_quota(track=True)
 
-        if self.verbose and verbose:
+        if (self.verbose and verbose) and self.logger_fn is not None:
             self.logger_fn(self._get_info_string(track=True))
             if self.time_exceeded:
                 self.logger_fn(self._get_time_exceeded_string())
