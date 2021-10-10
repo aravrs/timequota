@@ -7,6 +7,7 @@
 [[Changelog]](https://github.com/AravRS/timequota/blob/main/CHANGELOG.md)
 """
 
+import sys
 import time
 from statistics import mean
 
@@ -14,7 +15,19 @@ from tabulate import tabulate
 from colorama import Fore, Style
 
 from collections import defaultdict
-from typing import Any, Iterable, Iterator, Callable, Union, Literal
+from typing import Any, List, Iterable, Iterator, Callable
+
+
+# provide compability with python<3.8
+if sys.version_info[1] >= 8:
+    from typing import Literal
+
+    UnitType = Literal["s", "m", "h"]
+    DisplayUnitType = Literal["s", "m", "h", "p"]
+else:
+    UnitType = str
+    DisplayUnitType = str
+
 
 _time_dict = {
     "s": 1,
@@ -34,12 +47,12 @@ _color_dict = {
 class TimeQuota:
     def __init__(
         self,
-        quota: Union[int, float],
-        unit: Literal["s", "m", "h"] = "s",
-        display_unit: Literal["s", "m", "h", "p"] = None,
+        quota: float,
+        unit: UnitType = "s",
+        display_unit: DisplayUnitType = None,
         *,
         name: str = "tq",
-        step_aggr_fn: Callable[[list[float]], float] = mean,
+        step_aggr_fn: Callable[[List[float]], float] = mean,
         timer_fn: Callable[[], float] = time.perf_counter,
         logger_fn: Callable[[str], None] = print,
         precision: int = 4,
@@ -48,7 +61,7 @@ class TimeQuota:
     ) -> None:
         """
         Args:
-            quota (Union[int, float]): Maximum time limit.
+            quota (float): Maximum time limit.
             unit (Literal[s, m, h], optional): Unit of time of *quota* given, can be one of 's', 'm' or 'h' for seconds, minutes, or hours respectively . Defaults to 's'.
             display_unit (Literal[s, m, h, p], optional): Unit of time for logging messages, can be one of 's', 'm' or 'h' for seconds, minutes, or hours respectively; or 'p' for pretty format. Defaults to *unit*.
             name (str, optional): Custom name for quota timer. Defaults to 'tq'.
@@ -93,7 +106,7 @@ class TimeQuota:
         self.time_per_step: float = 0
         self.time_this_step: float = 0
 
-        self.time_since: Union[int, float] = self.timer_fn()
+        self.time_since: float = self.timer_fn()
 
     def _update_quota(
         self,
@@ -104,18 +117,18 @@ class TimeQuota:
         self.time_elapsed += self.time_this_step
         self.time_remaining -= self.time_this_step
 
-        self.overflow = self.time_remaining < 0
+        self.overflow = bool(self.time_remaining < 0)
 
         if track:
             self.time_steps.append(self.time_this_step)
             self.time_per_step = self.step_aggr_fn(self.time_steps)
-            self.predicted_overflow = self.time_per_step > self.time_remaining
+            self.predicted_overflow = bool(self.time_per_step > self.time_remaining)
 
-        self.time_exceeded = self.overflow or self.predicted_overflow
+        self.time_exceeded = bool(self.overflow or self.predicted_overflow)
 
     def _get_display_string(
         self,
-        seconds: Union[int, float],
+        seconds: float,
     ) -> str:
 
         if self.display_unit == "p":
@@ -144,7 +157,7 @@ class TimeQuota:
 
     def _get_pretty_string(
         self,
-        seconds: Union[int, float],
+        seconds: float,
         display: bool = False,
     ) -> str:
 
