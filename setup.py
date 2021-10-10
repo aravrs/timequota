@@ -23,5 +23,6 @@ setuptools.setup(
     install_requires=[
         "colorama",
         "tabulate",
+        "typeguard",
     ],
 )

@@ -6,21 +6,22 @@ authors = []
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.7,<3.11"
 colorama = "^0.4.4"
 tabulate = "^0.8.9"
+typeguard = "^2.12.1"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.2"
-black = "^21.8b0"
-ipykernel = "^6.3.1"
-numpy = "^1.21.2"
-pytest-cov = "^2.12.1"
-py-make = "^0.1.1"
+black = "^21.9b0"
 mypy = "^0.910"
 types-tabulate = "^0.8.2"
+pytest-cov = "^3.0.0"
 pytest-black = "^0.3.12"
+py-make = "^0.1.1"
+numpy = "^1.21.2"
 pdoc3 = "^0.10.0"
+ipykernel = "^6.4.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
