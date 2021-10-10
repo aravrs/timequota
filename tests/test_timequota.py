@@ -44,7 +44,7 @@ def test_init():
     assert tq.quota == 5.0 * (60 * 60)
 
     # infinite
-    tq = TimeQuota("inf", name="init-infinite", verbose=False)
+    tq = TimeQuota(float("inf"), name="init-infinite", verbose=False)
     assert tq.quota == float("inf")
 
     # custom params

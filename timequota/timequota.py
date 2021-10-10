@@ -15,7 +15,8 @@ from tabulate import tabulate
 from colorama import Fore, Style
 
 from collections import defaultdict
-from typing import Any, List, Iterable, Iterator, Callable
+from typing import Any, List, Iterable, Iterator, Callable, Optional
+from typeguard import typechecked
 
 
 # provide compability with python<3.8
@@ -44,6 +45,7 @@ _color_dict = {
 }
 
 
+@typechecked
 class TimeQuota:
     def __init__(
         self,
@@ -54,7 +56,7 @@ class TimeQuota:
         name: str = "tq",
         step_aggr_fn: Callable[[List[float]], float] = mean,
         timer_fn: Callable[[], float] = time.perf_counter,
-        logger_fn: Callable[[str], None] = print,
+        logger_fn: Optional[Callable[[str], None]] = print,
         precision: int = 4,
         color: bool = True,
         verbose: bool = True,
@@ -67,7 +69,7 @@ class TimeQuota:
             name (str, optional): Custom name for quota timer. Defaults to 'tq'.
             step_aggr_fn (Callable[[list[float]], float], optional): Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.
             timer_fn (Callable[[], float], optional): Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.
-            logger_fn (Callable[[str], None], optional): Custom info logger function. Defaults to print.
+            logger_fn (Optional[Callable[[str], None]], optional): Custom info logger function. Defaults to print.
             precision (int, optional): Custom value precision for logging messages. Defaults to 4.
             color (bool, optional): Enable or disable color. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages entirely. Defaults to True.
@@ -269,7 +271,7 @@ class TimeQuota:
         self,
         iterable: Iterable[Any],
         *,
-        time_exceeded_fn: Callable = None,
+        time_exceeded_fn: Optional[Callable] = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -> Iterator[Any]:
@@ -282,7 +284,7 @@ class TimeQuota:
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
-            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
             time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -304,7 +306,7 @@ class TimeQuota:
     def range(
         self,
         *args: Any,
-        time_exceeded_fn: Callable = None,
+        time_exceeded_fn: Optional[Callable] = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
         **kwargs: Any,
@@ -317,7 +319,7 @@ class TimeQuota:
             (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
-            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
             time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
