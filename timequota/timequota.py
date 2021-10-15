@@ -20,14 +20,14 @@ from typeguard import typechecked
 
 
 # provide compability with python<3.8
-if sys.version_info[1] >= 8:
+if sys.version_info[1] < 8:
+    UnitType = str
+    DisplayUnitType = str
+else:
     from typing import Literal
 
     UnitType = Literal["s", "m", "h"]
     DisplayUnitType = Literal["s", "m", "h", "p"]
-else:
-    UnitType = str
-    DisplayUnitType = str
 
 
 _time_dict = {
