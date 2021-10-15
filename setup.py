@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="timequota",
-    version="0.0.5",
+    version="0.0.6",
     author="AravRS",
     description="Manage the time of your script",
     long_description=open("PyPI.md").read(),

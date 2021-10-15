@@ -1,5 +1,25 @@
 ## Changelog
 
+### 0.0.6
+
+🐛 FIX:
+
+- Added compability with python<3.8
+- `logger_fn` Callable to support NoneType
+- Fixed docs link
+
+✨ New Feature:
+
+- Added typeguard to enforce type
+
+👷 CI:
+
+- Added python version 3.7, 3.8, 3.9 matrix tests
+
+🚀 RELEASE:
+
+- Initial complete release
+
 ### 0.0.5
 
 🚀 RELEASE:

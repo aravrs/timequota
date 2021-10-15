@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timequota"
-version = "0.0.5"
+version = "0.0.6"
 description = "Manage the time of your script"
 authors = []
 license = "MIT"
