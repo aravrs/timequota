@@ -43,6 +43,7 @@
 [[Changelog]](https://github.com/AravRS/timequota/blob/main/CHANGELOG.md)
 &#34;&#34;&#34;
 
+import sys
 import time
 from statistics import mean
 
@@ -50,7 +51,20 @@ from tabulate import tabulate
 from colorama import Fore, Style
 
 from collections import defaultdict
-from typing import Any, Iterable, Iterator, Callable, Union, Literal
+from typing import Any, List, Iterable, Iterator, Callable, Optional
+from typeguard import typechecked
+
+
+# provide compability with python&lt;3.8
+if sys.version_info[1] &lt; 8:
+    UnitType = str
+    DisplayUnitType = str
+else:
+    from typing import Literal
+
+    UnitType = Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;]
+    DisplayUnitType = Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;, &#34;p&#34;]
+
 
 _time_dict = {
     &#34;s&#34;: 1,
@@ -67,30 +81,31 @@ _color_dict = {
 }
 
 
+@typechecked
 class TimeQuota:
     def __init__(
         self,
-        quota: Union[int, float],
-        unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;] = &#34;s&#34;,
-        display_unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;, &#34;p&#34;] = None,
+        quota: float,
+        unit: UnitType = &#34;s&#34;,
+        display_unit: DisplayUnitType = None,
         *,
         name: str = &#34;tq&#34;,
-        step_aggr_fn: Callable[[list[float]], float] = mean,
+        step_aggr_fn: Callable[[List[float]], float] = mean,
         timer_fn: Callable[[], float] = time.perf_counter,
-        logger_fn: Callable[[str], None] = print,
+        logger_fn: Optional[Callable[[str], None]] = print,
         precision: int = 4,
         color: bool = True,
         verbose: bool = True,
     ) -&gt; None:
         &#34;&#34;&#34;
         Args:
-            quota (Union[int, float]): Maximum time limit.
+            quota (float): Maximum time limit.
             unit (Literal[s, m, h], optional): Unit of time of *quota* given, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively . Defaults to &#39;s&#39;.
             display_unit (Literal[s, m, h, p], optional): Unit of time for logging messages, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively; or &#39;p&#39; for pretty format. Defaults to *unit*.
             name (str, optional): Custom name for quota timer. Defaults to &#39;tq&#39;.
             step_aggr_fn (Callable[[list[float]], float], optional): Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.
             timer_fn (Callable[[], float], optional): Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.
-            logger_fn (Callable[[str], None], optional): Custom info logger function. Defaults to print.
+            logger_fn (Optional[Callable[[str], None]], optional): Custom info logger function. Defaults to print.
             precision (int, optional): Custom value precision for logging messages. Defaults to 4.
             color (bool, optional): Enable or disable color. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages entirely. Defaults to True.
@@ -129,7 +144,7 @@ class TimeQuota:
         self.time_per_step: float = 0
         self.time_this_step: float = 0
 
-        self.time_since: Union[int, float] = self.timer_fn()
+        self.time_since: float = self.timer_fn()
 
     def _update_quota(
         self,
@@ -140,18 +155,18 @@ class TimeQuota:
         self.time_elapsed += self.time_this_step
         self.time_remaining -= self.time_this_step
 
-        self.overflow = self.time_remaining &lt; 0
+        self.overflow = bool(self.time_remaining &lt; 0)
 
         if track:
             self.time_steps.append(self.time_this_step)
             self.time_per_step = self.step_aggr_fn(self.time_steps)
-            self.predicted_overflow = self.time_per_step &gt; self.time_remaining
+            self.predicted_overflow = bool(self.time_per_step &gt; self.time_remaining)
 
-        self.time_exceeded = self.overflow or self.predicted_overflow
+        self.time_exceeded = bool(self.overflow or self.predicted_overflow)
 
     def _get_display_string(
         self,
-        seconds: Union[int, float],
+        seconds: float,
     ) -&gt; str:
 
         if self.display_unit == &#34;p&#34;:
@@ -180,7 +195,7 @@ class TimeQuota:
 
     def _get_pretty_string(
         self,
-        seconds: Union[int, float],
+        seconds: float,
         display: bool = False,
     ) -&gt; str:
 
@@ -255,7 +270,7 @@ class TimeQuota:
 
         self._update_quota()
 
-        if self.verbose and verbose:
+        if (self.verbose and verbose) and self.logger_fn is not None:
             if self.time_exceeded:
                 self.logger_fn(self._get_time_exceeded_string())
             else:
@@ -280,7 +295,7 @@ class TimeQuota:
 
         self._update_quota(track=True)
 
-        if self.verbose and verbose:
+        if (self.verbose and verbose) and self.logger_fn is not None:
             self.logger_fn(self._get_info_string(track=True))
             if self.time_exceeded:
                 self.logger_fn(self._get_time_exceeded_string())
@@ -292,7 +307,7 @@ class TimeQuota:
         self,
         iterable: Iterable[Any],
         *,
-        time_exceeded_fn: Callable = None,
+        time_exceeded_fn: Optional[Callable] = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -&gt; Iterator[Any]:
@@ -305,7 +320,7 @@ class TimeQuota:
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
-            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
             time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -327,7 +342,7 @@ class TimeQuota:
     def range(
         self,
         *args: Any,
-        time_exceeded_fn: Callable = None,
+        time_exceeded_fn: Optional[Callable] = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
         **kwargs: Any,
@@ -340,7 +355,7 @@ class TimeQuota:
             (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
-            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
             time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -443,12 +458,12 @@ class TimeQuota:
 <dl>
 <dt id="timequota.TimeQuota"><code class="flex name class">
 <span>class <span class="ident">TimeQuota</span></span>
-<span>(</span><span>quota: Union[int, float], unit: Literal['s', 'm', 'h'] = 's', display_unit: Literal['s', 'm', 'h', 'p'] = None, *, name: str = 'tq', step_aggr_fn: Callable[[list[float]], float] = &lt;function mean&gt;, timer_fn: Callable[[], float] = &lt;built-in function perf_counter&gt;, logger_fn: Callable[[str], None] = &lt;built-in function print&gt;, precision: int = 4, color: bool = True, verbose: bool = True)</span>
+<span>(</span><span>quota: float, unit: Literal['s', 'm', 'h'] = 's', display_unit: Literal['s', 'm', 'h', 'p'] = None, *, name: str = 'tq', step_aggr_fn: Callable[[List[float]], float] = &lt;function mean&gt;, timer_fn: Callable[[], float] = &lt;built-in function perf_counter&gt;, logger_fn: Optional[Callable[[str], None]] = &lt;built-in function print&gt;, precision: int = 4, color: bool = True, verbose: bool = True)</span>
 </code></dt>
 <dd>
 <div class="desc"><h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>quota</code></strong> :&ensp;<code>Union[int, float]</code></dt>
+<dt><strong><code>quota</code></strong> :&ensp;<code>float</code></dt>
 <dd>Maximum time limit.</dd>
 <dt><strong><code>unit</code></strong> :&ensp;<code>Literal[s, m, h]</code>, optional</dt>
 <dd>Unit of time of <em>quota</em> given, can be one of 's', 'm' or 'h' for seconds, minutes, or hours respectively . Defaults to 's'.</dd>
@@ -460,7 +475,7 @@ class TimeQuota:
 <dd>Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.</dd>
 <dt><strong><code>timer_fn</code></strong> :&ensp;<code>Callable[[], float]</code>, optional</dt>
 <dd>Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.</dd>
-<dt><strong><code>logger_fn</code></strong> :&ensp;<code>Callable[[str], None]</code>, optional</dt>
+<dt><strong><code>logger_fn</code></strong> :&ensp;<code>Optional[Callable[[str], None]]</code>, optional</dt>
 <dd>Custom info logger function. Defaults to print.</dd>
 <dt><strong><code>precision</code></strong> :&ensp;<code>int</code>, optional</dt>
 <dd>Custom value precision for logging messages. Defaults to 4.</dd>
@@ -473,30 +488,31 @@ class TimeQuota:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class TimeQuota:
+<pre><code class="python">@typechecked
+class TimeQuota:
     def __init__(
         self,
-        quota: Union[int, float],
-        unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;] = &#34;s&#34;,
-        display_unit: Literal[&#34;s&#34;, &#34;m&#34;, &#34;h&#34;, &#34;p&#34;] = None,
+        quota: float,
+        unit: UnitType = &#34;s&#34;,
+        display_unit: DisplayUnitType = None,
         *,
         name: str = &#34;tq&#34;,
-        step_aggr_fn: Callable[[list[float]], float] = mean,
+        step_aggr_fn: Callable[[List[float]], float] = mean,
         timer_fn: Callable[[], float] = time.perf_counter,
-        logger_fn: Callable[[str], None] = print,
+        logger_fn: Optional[Callable[[str], None]] = print,
         precision: int = 4,
         color: bool = True,
         verbose: bool = True,
     ) -&gt; None:
         &#34;&#34;&#34;
         Args:
-            quota (Union[int, float]): Maximum time limit.
+            quota (float): Maximum time limit.
             unit (Literal[s, m, h], optional): Unit of time of *quota* given, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively . Defaults to &#39;s&#39;.
             display_unit (Literal[s, m, h, p], optional): Unit of time for logging messages, can be one of &#39;s&#39;, &#39;m&#39; or &#39;h&#39; for seconds, minutes, or hours respectively; or &#39;p&#39; for pretty format. Defaults to *unit*.
             name (str, optional): Custom name for quota timer. Defaults to &#39;tq&#39;.
             step_aggr_fn (Callable[[list[float]], float], optional): Function to aggregate individual time steps, used for overflow prediction. Defaults to mean.
             timer_fn (Callable[[], float], optional): Function timer called before and after code execution to calculate the time taken. Defaults to time.perf_counter.
-            logger_fn (Callable[[str], None], optional): Custom info logger function. Defaults to print.
+            logger_fn (Optional[Callable[[str], None]], optional): Custom info logger function. Defaults to print.
             precision (int, optional): Custom value precision for logging messages. Defaults to 4.
             color (bool, optional): Enable or disable color. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages entirely. Defaults to True.
@@ -535,7 +551,7 @@ class TimeQuota:
         self.time_per_step: float = 0
         self.time_this_step: float = 0
 
-        self.time_since: Union[int, float] = self.timer_fn()
+        self.time_since: float = self.timer_fn()
 
     def _update_quota(
         self,
@@ -546,18 +562,18 @@ class TimeQuota:
         self.time_elapsed += self.time_this_step
         self.time_remaining -= self.time_this_step
 
-        self.overflow = self.time_remaining &lt; 0
+        self.overflow = bool(self.time_remaining &lt; 0)
 
         if track:
             self.time_steps.append(self.time_this_step)
             self.time_per_step = self.step_aggr_fn(self.time_steps)
-            self.predicted_overflow = self.time_per_step &gt; self.time_remaining
+            self.predicted_overflow = bool(self.time_per_step &gt; self.time_remaining)
 
-        self.time_exceeded = self.overflow or self.predicted_overflow
+        self.time_exceeded = bool(self.overflow or self.predicted_overflow)
 
     def _get_display_string(
         self,
-        seconds: Union[int, float],
+        seconds: float,
     ) -&gt; str:
 
         if self.display_unit == &#34;p&#34;:
@@ -586,7 +602,7 @@ class TimeQuota:
 
     def _get_pretty_string(
         self,
-        seconds: Union[int, float],
+        seconds: float,
         display: bool = False,
     ) -&gt; str:
 
@@ -661,7 +677,7 @@ class TimeQuota:
 
         self._update_quota()
 
-        if self.verbose and verbose:
+        if (self.verbose and verbose) and self.logger_fn is not None:
             if self.time_exceeded:
                 self.logger_fn(self._get_time_exceeded_string())
             else:
@@ -686,7 +702,7 @@ class TimeQuota:
 
         self._update_quota(track=True)
 
-        if self.verbose and verbose:
+        if (self.verbose and verbose) and self.logger_fn is not None:
             self.logger_fn(self._get_info_string(track=True))
             if self.time_exceeded:
                 self.logger_fn(self._get_time_exceeded_string())
@@ -698,7 +714,7 @@ class TimeQuota:
         self,
         iterable: Iterable[Any],
         *,
-        time_exceeded_fn: Callable = None,
+        time_exceeded_fn: Optional[Callable] = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
     ) -&gt; Iterator[Any]:
@@ -711,7 +727,7 @@ class TimeQuota:
 
         Args:
             iterable (Iterable[Any]): Iterable to be iterated.
-            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
             time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -733,7 +749,7 @@ class TimeQuota:
     def range(
         self,
         *args: Any,
-        time_exceeded_fn: Callable = None,
+        time_exceeded_fn: Optional[Callable] = None,
         time_exceeded_break: bool = True,
         verbose: bool = True,
         **kwargs: Any,
@@ -746,7 +762,7 @@ class TimeQuota:
             (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
         Args:
-            time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+            time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
             time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
             verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -840,7 +856,7 @@ class TimeQuota:
 <h3>Methods</h3>
 <dl>
 <dt id="timequota.TimeQuota.iter"><code class="name flex">
-<span>def <span class="ident">iter</span></span>(<span>self, iterable: Iterable[Any], *, time_exceeded_fn: Callable = None, time_exceeded_break: bool = True, verbose: bool = True) ‑> Iterator[Any]</span>
+<span>def <span class="ident">iter</span></span>(<span>self, iterable: Iterable[Any], *, time_exceeded_fn: Optional[Callable] = None, time_exceeded_break: bool = True, verbose: bool = True) ‑> Iterator[Any]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Time limited iterator of the iterable. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
@@ -852,7 +868,7 @@ exceeded the time quota and overflow occurs.
 <dl>
 <dt><strong><code>iterable</code></strong> :&ensp;<code>Iterable[Any]</code></dt>
 <dd>Iterable to be iterated.</dd>
-<dt><strong><code>time_exceeded_fn</code></strong> :&ensp;<code>Callable</code>, optional</dt>
+<dt><strong><code>time_exceeded_fn</code></strong> :&ensp;<code>Optional[Callable]</code>, optional</dt>
 <dd>Function to be executed if time exceeds. Defaults to None.</dd>
 <dt><strong><code>time_exceeded_break</code></strong> :&ensp;<code>bool</code>, optional</dt>
 <dd>To break out of the loop if time exceeds. Defaults to True.</dd>
@@ -872,7 +888,7 @@ exceeded the time quota and overflow occurs.
     self,
     iterable: Iterable[Any],
     *,
-    time_exceeded_fn: Callable = None,
+    time_exceeded_fn: Optional[Callable] = None,
     time_exceeded_break: bool = True,
     verbose: bool = True,
 ) -&gt; Iterator[Any]:
@@ -885,7 +901,7 @@ exceeded the time quota and overflow occurs.
 
     Args:
         iterable (Iterable[Any]): Iterable to be iterated.
-        time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+        time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
         time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
         verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -906,7 +922,7 @@ exceeded the time quota and overflow occurs.
 </details>
 </dd>
 <dt id="timequota.TimeQuota.range"><code class="name flex">
-<span>def <span class="ident">range</span></span>(<span>self, *args: Any, time_exceeded_fn: Callable = None, time_exceeded_break: bool = True, verbose: bool = True, **kwargs: Any) ‑> Iterator[int]</span>
+<span>def <span class="ident">range</span></span>(<span>self, *args: Any, time_exceeded_fn: Optional[Callable] = None, time_exceeded_break: bool = True, verbose: bool = True, **kwargs: Any) ‑> Iterator[int]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Time limited range. When called, updates the quota and tracks time taken for each iteration, upon quota (predicted) exhaustion stops iteration (default).</p>
@@ -916,7 +932,7 @@ exceeded the time quota and overflow occurs.
 (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the <em>step_aggr_fn</em>) will exceed the time quota.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>time_exceeded_fn</code></strong> :&ensp;<code>Callable</code>, optional</dt>
+<dt><strong><code>time_exceeded_fn</code></strong> :&ensp;<code>Optional[Callable]</code>, optional</dt>
 <dd>Function to be executed if time exceeds. Defaults to None.</dd>
 <dt><strong><code>time_exceeded_break</code></strong> :&ensp;<code>bool</code>, optional</dt>
 <dd>To break out of the loop if time exceeds. Defaults to True.</dd>
@@ -935,7 +951,7 @@ exceeded the time quota and overflow occurs.
 <pre><code class="python">def range(
     self,
     *args: Any,
-    time_exceeded_fn: Callable = None,
+    time_exceeded_fn: Optional[Callable] = None,
     time_exceeded_break: bool = True,
     verbose: bool = True,
     **kwargs: Any,
@@ -948,7 +964,7 @@ exceeded the time quota and overflow occurs.
         (ii) Predicted exhaustion - The time taken by the next iteration (calculated by the *step_aggr_fn*) will exceed the time quota.
 
     Args:
-        time_exceeded_fn (Callable, optional): Function to be executed if time exceeds. Defaults to None.
+        time_exceeded_fn (Optional[Callable], optional): Function to be executed if time exceeds. Defaults to None.
         time_exceeded_break (bool, optional): To break out of the loop if time exceeds. Defaults to True.
         verbose (bool, optional): Enable or disable logging messages. Defaults to True.
 
@@ -991,7 +1007,7 @@ exceeded the time quota and overflow occurs.
     self.time_per_step: float = 0
     self.time_this_step: float = 0
 
-    self.time_since: Union[int, float] = self.timer_fn()</code></pre>
+    self.time_since: float = self.timer_fn()</code></pre>
 </details>
 </dd>
 <dt id="timequota.TimeQuota.track"><code class="name flex">
@@ -1029,7 +1045,7 @@ exceeded the time quota and overflow occurs.
 
     self._update_quota(track=True)
 
-    if self.verbose and verbose:
+    if (self.verbose and verbose) and self.logger_fn is not None:
         self.logger_fn(self._get_info_string(track=True))
         if self.time_exceeded:
             self.logger_fn(self._get_time_exceeded_string())
@@ -1074,7 +1090,7 @@ exceeded the time quota and overflow occurs.
 
     self._update_quota()
 
-    if self.verbose and verbose:
+    if (self.verbose and verbose) and self.logger_fn is not None:
         if self.time_exceeded:
             self.logger_fn(self._get_time_exceeded_string())
         else:

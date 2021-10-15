@@ -10,7 +10,7 @@ setuptools.setup(
     url="https://aravrs.github.io/timequota",
     project_urls={
         "Source": "https://github.com/AravRS/timequota",
-        "Documentation": "https://aravrs.github.io/timequota/timequota.html",
+        "Documentation": "https://aravrs.github.io/timequota/timequota",
         "Changelog": "https://github.com/aravrs/timequota/blob/main/CHANGELOG.md",
     },
     license="MIT",

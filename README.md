@@ -12,7 +12,7 @@
     ·
     <a href="https://colab.research.google.com/github/aravrs/timequota/blob/main/demo.ipynb">Colab</a>
     ·
-    <a href="https://aravrs.github.io/timequota">Docs</a>
+    <a href="https://aravrs.github.io/timequota/timequota">Docs</a>
     ·
     <a href="https://github.com/aravrs/timequota/blob/main/CHANGELOG.md">Changelog</a>
   </p>
